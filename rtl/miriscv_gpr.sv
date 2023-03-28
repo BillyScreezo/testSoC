@@ -34,47 +34,17 @@
 
   localparam    NUM_WORDS  = 2**GPR_ADDR_WIDTH;
 
-  logic [NUM_WORDS-1:0][XLEN-1:0] rf_reg;
-  logic [NUM_WORDS-1:0][XLEN-1:0] rf_reg_tmp;
-  logic [NUM_WORDS-1:0]           wr_en_dec;
+  logic [XLEN-1:0] rf_reg [0 : NUM_WORDS-1];
 
-  always_comb
-  begin : wr_en_decoder
-    for (int i = 0; i < NUM_WORDS; i++) begin
-      if (wr_addr_i == i)
-        wr_en_dec[i] = wr_en_i;
-      else
-        wr_en_dec[i] = 1'b0;
-    end
+  initial begin
+    rf_reg[0] = '0;
   end
-
-
-  genvar i;
-  generate
-    for (i = 1; i < NUM_WORDS; i++)
-    begin : rf_gen
-
-      always_ff @(posedge clk_i, negedge arstn_i)
-      begin : register_write_behavioral
-        if (arstn_i==1'b0) begin
-          rf_reg_tmp[i] <= 'b0;
-        end else begin
-          if (wr_en_dec[i])
-            rf_reg_tmp[i] <= wr_data_i;
-        end
-      end
-
-    end
-
-    // R0 is nil
-    assign rf_reg[0] = '0;
-    assign rf_reg[NUM_WORDS-1:1] = rf_reg_tmp[NUM_WORDS-1:1];
-
-  endgenerate
 
   assign r1_data_o = rf_reg[r1_addr_i];
   assign r2_data_o = rf_reg[r2_addr_i];
 
-
+  always_ff @(posedge clk_i)
+    if(wr_en_i && (wr_addr_i != 0))
+      rf_reg[wr_addr_i] <= wr_data_i;
 
 endmodule: miriscv_gpr
