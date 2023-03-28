@@ -1,0 +1,3 @@
+CoreMark: 23.590991
+Worst slack: -14.6 ns
+Total slack: -51436.512 ns
