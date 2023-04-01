@@ -18,7 +18,7 @@ module miriscv_decoder
     output logic [1:0]  decode_ex_op1_sel_o,
     output logic [1:0]  decode_ex_op2_sel_o,
 
-    output logic [4:0]  decode_alu_operation_o,
+    output logic [3:0]  decode_alu_operation_o,
 
     output logic [2:0]  decode_mdu_operation_o,
     output logic        decode_ex_mdu_req_o,
@@ -80,8 +80,6 @@ module miriscv_decoder
   assign decode_fence_o         = (opcode == S_OPCODE_FENCE) && !(ill_fence || ill_last_bits);
 
   assign ill_last_bits = (decode_instr_i[1:0] != 2'b11);
-
-  logic [4:0] alu_op;
 
   always_comb begin
     ill_fence     = 1'b0;
@@ -185,58 +183,9 @@ module miriscv_decoder
 
     unique case(opcode)
       S_OPCODE_LOAD:  decode_wb_src_sel_o = LSU_DATA;
+      S_OPCODE_JAL, S_OPCODE_JALR: decode_wb_src_sel_o = PC_DATA;
       default:        decode_wb_src_sel_o = (decode_ex_mdu_req_o) ? MDU_DATA : ALU_DATA;
     endcase
-
-    // unique case(funct3)
-    //   3'b000: decode_mem_size_o = MEM_ACCESS_BYTE;
-    //   3'b001: decode_mem_size_o = MEM_ACCESS_HALF;
-    //   3'b100: decode_mem_size_o = MEM_ACCESS_UBYTE;
-    //   3'b101: decode_mem_size_o = MEM_ACCESS_UHALF;
-    //   default:decode_mem_size_o = MEM_ACCESS_WORD;
-    // endcase
-
-    // unique case(funct3)
-    //   3'b000: decode_mdu_operation_o = MDU_MUL;
-    //   3'b001: decode_mdu_operation_o = MDU_MULH;
-    //   3'b010: decode_mdu_operation_o = MDU_MULHSU;
-    //   3'b011: decode_mdu_operation_o = MDU_MULHU;
-    //   3'b100: decode_mdu_operation_o = MDU_DIV;
-    //   3'b101: decode_mdu_operation_o = MDU_DIVU;
-    //   3'b110: decode_mdu_operation_o = MDU_REM;
-    //   3'b111: decode_mdu_operation_o = MDU_REMU;
-    // endcase
-
-    case({funct7[5],funct3,opcode}) inside
-      {1'b1,3'b000,S_OPCODE_OP}:      alu_op = ALU_SUB;
-      {1'b?,3'b010,5'b0?100}:         alu_op = ALU_SLT;
-      {1'b?,3'b011,5'b0?100}:         alu_op = ALU_SLTU;
-      {1'b?,3'b100,5'b0?100}:         alu_op = ALU_XOR;
-      {1'b?,3'b110,5'b0?100}:         alu_op = ALU_OR;
-      {1'b?,3'b111,5'b0?100}:         alu_op = ALU_AND;
-      {1'b?,3'b001,5'b0?100}:         alu_op = ALU_SLL;
-      {1'b0,3'b101,5'b0?100}:         alu_op = ALU_SRL;
-      {1'b1,3'b101,5'b0?100}:         alu_op = ALU_SRA;
-      {1'b?,3'b000,S_OPCODE_BRANCH}:  alu_op = ALU_EQ;
-      {1'b?,3'b001,S_OPCODE_BRANCH}:  alu_op = ALU_NE;
-      {1'b?,3'b100,S_OPCODE_BRANCH}:  alu_op = ALU_LT;
-      {1'b?,3'b101,S_OPCODE_BRANCH}:  alu_op = ALU_GE;
-      {1'b?,3'b110,S_OPCODE_BRANCH}:  alu_op = ALU_LTU;
-      {1'b?,3'b111,S_OPCODE_BRANCH}:  alu_op = ALU_GEU;
-      {1'b?,3'b???,S_OPCODE_JALR},
-      {1'b?,3'b???,S_OPCODE_JAL}:     alu_op = ALU_JAL;
-      default: alu_op = ALU_ADD;
-    endcase
-
-    if (decode_illegal_instr_o) begin
-      decode_alu_operation_o = ALU_ADD;
-    end
-    else if(decode_ex_mdu_req_o == 1'b1) begin
-      decode_alu_operation_o = ALU_ADD;
-    end
-    else begin
-      decode_alu_operation_o = alu_op;
-    end
 
     if(opcode[4:2] == 3'b110) begin
       case(opcode[1:0])
@@ -249,7 +198,24 @@ module miriscv_decoder
   end
 
 
-  assign decode_mem_size_o = funct3;
-  assign decode_mdu_operation_o = funct3;
+// Alu
 
+  logic [3:0] alu_op;
+
+  assign alu_op[2:0] = opcode[0] ? ALU_ADD_SUB : funct3;  // Арифметические отличаются по нулевому биту опкода
+
+  always_comb begin
+    alu_op[3] = '0;
+
+    case (opcode)
+      S_OPCODE_OP:      alu_op[3] = funct7[5];
+      S_OPCODE_OPIMM:   alu_op[3] = (funct3 == 3'h5) ? funct7[5] : 1'b0;
+    endcase
+
+  end
+
+// Exit assigns
+  assign decode_alu_operation_o = alu_op;
+  assign decode_mem_size_o      = funct3;
+  assign decode_mdu_operation_o = funct3;
 endmodule

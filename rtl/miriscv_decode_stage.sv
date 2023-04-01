@@ -79,7 +79,7 @@ module miriscv_decode_stage
   logic [1:0]  decode_ex_op1_sel;
   logic [1:0]  decode_ex_op2_sel;
 
-  logic [4:0]  decode_alu_operation;
+  logic [3:0]  decode_alu_operation;
   logic [2:0]  decode_mdu_operation;
 
   logic        decode_ex_mdu_req;
@@ -275,12 +275,15 @@ module miriscv_decode_stage
       ALU_DATA : ex_result = alu_result; // This needs a readable parameter
       MDU_DATA : ex_result = mdu_result;
       LSU_DATA : ex_result = lsu_result;
+      PC_DATA  : ex_result = f_next_pc_i;
     endcase
   end
 
   miriscv_alu alu (
     .alu_port_a_i      (op1                  ),
     .alu_port_b_i      (op2                  ),
+    .cmp_a_i           (r1_data              ),
+    .cmp_b_i           (r2_data              ),
     .alu_op_i          (decode_alu_operation ),
     .alu_result_o      (alu_result           ),
     .alu_branch_des_o  (branch_des           )
@@ -351,7 +354,7 @@ module miriscv_decode_stage
 
 
   assign cu_stall_f_o = cu_boot_addr_load_en_o | lsu_stall_req | mdu_stall_req;
-  assign cu_kill_f_o  = branch_des | d_jal | d_jalr;
+  assign cu_kill_f_o  = (branch_des & d_branch) | d_jal | d_jalr;
 
   assign cu_kill_d_o  = 'b0;
   assign cu_stall_d_o = cu_stall_f_o;
@@ -381,7 +384,7 @@ module miriscv_decode_stage
 
   // IRQ > Exc > Branch = JALR = MRET > JAL = WFI
   always_comb begin
-    case ({branch_des, d_jalr, d_jal}) inside
+    case ({(branch_des & d_branch), d_jalr, d_jal}) inside
       3'b1??:  next_pc_sel = PC_BRANCH;
       3'b01?:  next_pc_sel = PC_JALR;
       3'b001:  next_pc_sel = PC_JAL;
