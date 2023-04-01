@@ -188,24 +188,24 @@ module miriscv_decoder
       default:        decode_wb_src_sel_o = (decode_ex_mdu_req_o) ? MDU_DATA : ALU_DATA;
     endcase
 
-    unique case(funct3)
-      3'b000: decode_mem_size_o = MEM_ACCESS_BYTE;
-      3'b001: decode_mem_size_o = MEM_ACCESS_HALF;
-      3'b100: decode_mem_size_o = MEM_ACCESS_UBYTE;
-      3'b101: decode_mem_size_o = MEM_ACCESS_UHALF;
-      default:decode_mem_size_o = MEM_ACCESS_WORD;
-    endcase
+    // unique case(funct3)
+    //   3'b000: decode_mem_size_o = MEM_ACCESS_BYTE;
+    //   3'b001: decode_mem_size_o = MEM_ACCESS_HALF;
+    //   3'b100: decode_mem_size_o = MEM_ACCESS_UBYTE;
+    //   3'b101: decode_mem_size_o = MEM_ACCESS_UHALF;
+    //   default:decode_mem_size_o = MEM_ACCESS_WORD;
+    // endcase
 
-    unique case(funct3)
-      3'b000: decode_mdu_operation_o = MDU_MUL;
-      3'b001: decode_mdu_operation_o = MDU_MULH;
-      3'b010: decode_mdu_operation_o = MDU_MULHSU;
-      3'b011: decode_mdu_operation_o = MDU_MULHU;
-      3'b100: decode_mdu_operation_o = MDU_DIV;
-      3'b101: decode_mdu_operation_o = MDU_DIVU;
-      3'b110: decode_mdu_operation_o = MDU_REM;
-      3'b111: decode_mdu_operation_o = MDU_REMU;
-    endcase
+    // unique case(funct3)
+    //   3'b000: decode_mdu_operation_o = MDU_MUL;
+    //   3'b001: decode_mdu_operation_o = MDU_MULH;
+    //   3'b010: decode_mdu_operation_o = MDU_MULHSU;
+    //   3'b011: decode_mdu_operation_o = MDU_MULHU;
+    //   3'b100: decode_mdu_operation_o = MDU_DIV;
+    //   3'b101: decode_mdu_operation_o = MDU_DIVU;
+    //   3'b110: decode_mdu_operation_o = MDU_REM;
+    //   3'b111: decode_mdu_operation_o = MDU_REMU;
+    // endcase
 
     case({funct7[5],funct3,opcode}) inside
       {1'b1,3'b000,S_OPCODE_OP}:      alu_op = ALU_SUB;
@@ -247,5 +247,9 @@ module miriscv_decoder
     end
 
   end
+
+
+  assign decode_mem_size_o = funct3;
+  assign decode_mdu_operation_o = funct3;
 
 endmodule

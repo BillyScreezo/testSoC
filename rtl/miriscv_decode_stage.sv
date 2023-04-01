@@ -261,7 +261,7 @@ module miriscv_decode_stage
 
   assign decode_mem_data     = op2;
   assign decode_mem_addr_imm = decode_load ? imm_i : imm_s;
-  assign decode_mem_addr     = op1 + decode_mem_addr_imm;
+  assign decode_mem_addr     = r1_data + decode_mem_addr_imm;
 
 
   
@@ -290,8 +290,8 @@ module miriscv_decode_stage
     .clk_i           (clk_i                            ),
     .arstn_i         (arstn_i                          ),
     .mdu_req_i       (decode_ex_mdu_req                ),
-    .mdu_port_a_i    (op1                              ),
-    .mdu_port_b_i    (op2                              ),
+    .mdu_port_a_i    (r1_data                          ),
+    .mdu_port_b_i    (r2_data                          ),
     .mdu_op_i        (decode_mdu_operation             ),
     .mdu_kill_i      (1'b0                             ),
     .mdu_keep_i      (1'b0                             ),
