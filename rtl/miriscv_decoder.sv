@@ -15,8 +15,8 @@ module miriscv_decoder
     output              decode_rs1_re_o,
     output              decode_rs2_re_o,
 
-    output logic [1:0]  decode_ex_op1_sel_o,
-    output logic [1:0]  decode_ex_op2_sel_o,
+    output logic        decode_ex_op1_sel_o,
+    output logic        decode_ex_op2_sel_o,
 
     output logic [3:0]  decode_alu_operation_o,
 
@@ -58,8 +58,8 @@ module miriscv_decoder
   assign funct3 = decode_instr_i[14:12];
   assign funct7 = decode_instr_i[31:25];
 
-  assign decode_rs1_re_o        = (decode_ex_op1_sel_o == RS1_DATA) && !decode_illegal_instr_o;
-  assign decode_rs2_re_o        = (decode_ex_op2_sel_o == RS2_DATA) && !decode_illegal_instr_o;
+  assign decode_rs1_re_o        = (decode_ex_op1_sel_o == 1'b0) && !decode_illegal_instr_o;
+  assign decode_rs2_re_o        = (decode_ex_op2_sel_o == 1'b0) && !decode_illegal_instr_o;
   assign decode_ex_mdu_req_o    = (opcode == S_OPCODE_OP) && (funct7 == 1'b1) && !(ill_last_bits || ill_op_mul);
   assign decode_wb_we_o         = !((opcode == S_OPCODE_FENCE) || decode_illegal_instr_o ||
                                     (opcode[3:0] == 4'b1000)); // STORE or BRANCH
@@ -158,38 +158,28 @@ module miriscv_decoder
   always_comb begin
 
     unique case(opcode)
-      S_OPCODE_LUI:   decode_ex_op1_sel_o = ZERO;
-      S_OPCODE_AUIPC: decode_ex_op1_sel_o = CURRENT_PC;
-      S_OPCODE_JAL:    decode_ex_op1_sel_o = ZERO;
-      S_OPCODE_FENCE:  decode_ex_op1_sel_o = ZERO;
-
-      default:        decode_ex_op1_sel_o = RS1_DATA;
+      S_OPCODE_AUIPC: decode_ex_op1_sel_o = 1'b1;
+      default:        decode_ex_op1_sel_o = 1'b0;
     endcase
 
     unique case(opcode)
-      S_OPCODE_OP,
-      S_OPCODE_BRANCH,
-      S_OPCODE_STORE:   decode_ex_op2_sel_o = RS2_DATA;
-      S_OPCODE_AUIPC,
-      S_OPCODE_LUI:     decode_ex_op2_sel_o = IMM_U;
-      S_OPCODE_JAL,
-      S_OPCODE_JALR:    decode_ex_op2_sel_o = NEXT_PC;
-      default:          decode_ex_op2_sel_o = IMM_I;
+      S_OPCODE_OPIMM, S_OPCODE_AUIPC:   decode_ex_op2_sel_o = 1'b1;
+      default:                          decode_ex_op2_sel_o = 1'b0;
 
     endcase
 
     unique case(opcode)
-      S_OPCODE_LOAD:  decode_wb_src_sel_o = LSU_DATA;
-      S_OPCODE_JAL, S_OPCODE_JALR: decode_wb_src_sel_o = PC_DATA;
-      S_OPCODE_LUI: decode_wb_src_sel_o = IMM_DATA;
-      default:        decode_wb_src_sel_o = (decode_ex_mdu_req_o) ? MDU_DATA : ALU_DATA;
+      S_OPCODE_LOAD:                decode_wb_src_sel_o = LSU_DATA;
+      S_OPCODE_JAL, S_OPCODE_JALR:  decode_wb_src_sel_o = PC_DATA;
+      S_OPCODE_LUI:                 decode_wb_src_sel_o = IMM_DATA;
+      default:                      decode_wb_src_sel_o = (decode_ex_mdu_req_o) ? MDU_DATA : ALU_DATA;
     endcase
 
   end
 
-  assign decode_jal_o = (opcode == S_OPCODE_JAL) ? 1 : 0;
-  assign decode_jalr_o = (opcode == S_OPCODE_JALR) ? 1 : 0;
-  assign decode_branch_o = (opcode == S_OPCODE_BRANCH) ? 1 : 0;
+  assign decode_jal_o     = (opcode == S_OPCODE_JAL) ? 1 : 0;
+  assign decode_jalr_o    = (opcode == S_OPCODE_JALR) ? 1 : 0;
+  assign decode_branch_o  = (opcode == S_OPCODE_BRANCH) ? 1 : 0;
 
 // Alu
 

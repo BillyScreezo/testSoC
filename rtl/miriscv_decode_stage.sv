@@ -76,8 +76,8 @@ module miriscv_decode_stage
   logic        decode_rs1_re;
   logic        decode_rs2_re;
 
-  logic [1:0]  decode_ex_op1_sel;
-  logic [1:0]  decode_ex_op2_sel;
+  logic        decode_ex_op1_sel;
+  logic        decode_ex_op2_sel;
 
   logic [3:0]  decode_alu_operation;
   logic [2:0]  decode_mdu_operation;
@@ -96,7 +96,6 @@ module miriscv_decode_stage
   logic [2:0]  decode_wb_src_sel;
   logic        decode_wb_we;
 
-  logic [XLEN-1:0] decode_mem_addr_imm;
   logic [XLEN-1:0] decode_mem_addr;
   logic [XLEN-1:0] decode_mem_data;
   logic            decode_load;
@@ -154,8 +153,6 @@ module miriscv_decode_stage
 
 
   // Register File
-
-
   logic [GPR_ADDR_WIDTH-1:0]  r1_addr;
   logic [XLEN-1:0]            r1_data;
   logic [GPR_ADDR_WIDTH-1:0]  r2_addr;
@@ -166,9 +163,6 @@ module miriscv_decode_stage
   logic [GPR_ADDR_WIDTH-1:0]  gpr_wr_addr;
   logic [XLEN-1:0]            gpr_wr_data;
 
-
-
-  
   assign gpr_wr_en   = decode_wb_we & ~cu_stall_d_o;
   assign gpr_wr_addr = rd_addr;
   assign gpr_wr_data = ex_result;
@@ -176,9 +170,6 @@ module miriscv_decode_stage
   assign r1_addr = f_instr_i[19:15];
   assign r2_addr = f_instr_i[24:20];
   assign rd_addr = f_instr_i[11:7];  
-
-  
-
 
   miriscv_gpr  gpr (
     .clk_i      (clk_i        ),
@@ -196,7 +187,6 @@ module miriscv_decode_stage
   );
 
   // Immediate and signextend
-
   logic [XLEN-1:0] imm;
 
   miriscv_imm imm_inst (
@@ -204,76 +194,17 @@ module miriscv_decode_stage
     .imm_o(imm)
   );
 
-
-
-  logic [XLEN-1:0] imm_i;
-  logic [XLEN-1:0] imm_u;
-  logic [XLEN-1:0] imm_s;
-  logic [XLEN-1:0] imm_b;
-  logic [XLEN-1:0] imm_j;
-
-  miriscv_signextend #(
-    .IN_WIDTH  (12  ),
-    .OUT_WIDTH (XLEN)
-  ) extend_imm_i (
-    .data_i (f_instr_i[31:20] ),
-    .data_o (imm_i)
-  );
-
-  assign imm_u = {f_instr_i[31:12], 12'd0};
-
-  miriscv_signextend #(
-    .IN_WIDTH  (12  ),
-    .OUT_WIDTH (XLEN)
-  ) extend_imm_s (
-    .data_i ({f_instr_i[31:25], f_instr_i[11:7]}),
-    .data_o (imm_s)
-  );
-
-  miriscv_signextend #(
-    .IN_WIDTH  (13  ),
-    .OUT_WIDTH (XLEN)
-  ) extend_imm_b (
-    .data_i ({f_instr_i[31], f_instr_i[7], f_instr_i[30:25], f_instr_i[11:8], 1'b0}),
-    .data_o (imm_b)
-  );
-
-  miriscv_signextend #(
-    .IN_WIDTH  (21),
-    .OUT_WIDTH (XLEN)
-  ) extend_imm_j (
-    .data_i ({f_instr_i[31], f_instr_i[19:12], f_instr_i[20], f_instr_i[30:21], 1'b0}),
-    .data_o (imm_j)
-  );
-
-
   // Datapath
   logic [XLEN-1:0] op1;
   logic [XLEN-1:0] op2;
 
-  always_comb begin
-    unique case (decode_ex_op1_sel)
-      RS1_DATA:   op1 = r1_data;
-      CURRENT_PC: op1 = f_current_pc_i;
-      ZERO:       op1 = {XLEN{1'b0}};
-    endcase
-  end
+  assign op1 = decode_ex_op1_sel ? f_current_pc_i : r1_data;
+  assign op2 = decode_ex_op2_sel ? imm            : r2_data;
 
-  always_comb begin
-    unique case (decode_ex_op2_sel)
-      RS2_DATA: op2 = r2_data;
-      IMM_I:    op2 = imm;
-      IMM_U:    op2 = imm;
-      NEXT_PC:  op2 = f_next_pc_i;
-    endcase
-  end
-
+ 
   assign decode_mem_data     = op2;
-  // assign decode_mem_addr_imm = decode_load ? imm_i : imm_s;
   assign decode_mem_addr     = r1_data + imm;
 
-
-  
 
   logic [XLEN-1:0] alu_result;
   logic [XLEN-1:0] mdu_result;
@@ -372,19 +303,16 @@ module miriscv_decode_stage
   // precompute PC values in case of jump
   logic [XLEN-1:0] jalr_pc;
   logic [XLEN-1:0] branch_pc;
-  logic [XLEN-1:0] jal_pc;
 
   assign jalr_pc   = op1 + imm;
   assign branch_pc = f_current_pc_i  + imm;
-  assign jal_pc    = f_current_pc_i  + imm;
-
 
   // IRQ > Exc > Branch = JALR = MRET > JAL = WFI
   always_comb begin
     case ({(branch_des & d_branch), d_jalr, d_jal}) inside
       3'b1??:  cu_pc_bra_o = branch_pc;
       3'b01?:  cu_pc_bra_o = jalr_pc;
-      3'b001:  cu_pc_bra_o = jal_pc;
+      3'b001:  cu_pc_bra_o = branch_pc;
       default: cu_pc_bra_o = branch_pc;
     endcase
   end
