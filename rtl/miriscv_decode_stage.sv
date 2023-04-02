@@ -79,7 +79,7 @@ module miriscv_decode_stage
   logic [1:0]  decode_ex_op1_sel;
   logic [1:0]  decode_ex_op2_sel;
 
-  logic [4:0]  decode_alu_operation;
+  logic [3:0]  decode_alu_operation;
   logic [2:0]  decode_mdu_operation;
 
   logic        decode_ex_mdu_req;
@@ -93,7 +93,7 @@ module miriscv_decode_stage
   logic        decode_csr_src_sel;
   logic        decode_csr_req;
 
-  logic [1:0]  decode_wb_src_sel;
+  logic [2:0]  decode_wb_src_sel;
   logic        decode_wb_we;
 
   logic [XLEN-1:0] decode_mem_addr_imm;
@@ -197,6 +197,15 @@ module miriscv_decode_stage
 
   // Immediate and signextend
 
+  logic [XLEN-1:0] imm;
+
+  miriscv_imm imm_inst (
+    .instr_i(f_instr_i),
+    .imm_o(imm)
+  );
+
+
+
   logic [XLEN-1:0] imm_i;
   logic [XLEN-1:0] imm_u;
   logic [XLEN-1:0] imm_s;
@@ -253,15 +262,15 @@ module miriscv_decode_stage
   always_comb begin
     unique case (decode_ex_op2_sel)
       RS2_DATA: op2 = r2_data;
-      IMM_I:    op2 = imm_i;
-      IMM_U:    op2 = imm_u;
+      IMM_I:    op2 = imm;
+      IMM_U:    op2 = imm;
       NEXT_PC:  op2 = f_next_pc_i;
     endcase
   end
 
   assign decode_mem_data     = op2;
-  assign decode_mem_addr_imm = decode_load ? imm_i : imm_s;
-  assign decode_mem_addr     = op1 + decode_mem_addr_imm;
+  // assign decode_mem_addr_imm = decode_load ? imm_i : imm_s;
+  assign decode_mem_addr     = r1_data + imm;
 
 
   
@@ -275,12 +284,16 @@ module miriscv_decode_stage
       ALU_DATA : ex_result = alu_result; // This needs a readable parameter
       MDU_DATA : ex_result = mdu_result;
       LSU_DATA : ex_result = lsu_result;
+      PC_DATA  : ex_result = f_next_pc_i;
+      IMM_DATA : ex_result = imm;
     endcase
   end
 
   miriscv_alu alu (
     .alu_port_a_i      (op1                  ),
     .alu_port_b_i      (op2                  ),
+    .cmp_a_i           (r1_data              ),
+    .cmp_b_i           (r2_data              ),
     .alu_op_i          (decode_alu_operation ),
     .alu_result_o      (alu_result           ),
     .alu_branch_des_o  (branch_des           )
@@ -290,8 +303,8 @@ module miriscv_decode_stage
     .clk_i           (clk_i                            ),
     .arstn_i         (arstn_i                          ),
     .mdu_req_i       (decode_ex_mdu_req                ),
-    .mdu_port_a_i    (op1                              ),
-    .mdu_port_b_i    (op2                              ),
+    .mdu_port_a_i    (r1_data                          ),
+    .mdu_port_b_i    (r2_data                          ),
     .mdu_op_i        (decode_mdu_operation             ),
     .mdu_kill_i      (1'b0                             ),
     .mdu_keep_i      (1'b0                             ),
@@ -351,7 +364,7 @@ module miriscv_decode_stage
 
 
   assign cu_stall_f_o = cu_boot_addr_load_en_o | lsu_stall_req | mdu_stall_req;
-  assign cu_kill_f_o  = branch_des | d_jal | d_jalr;
+  assign cu_kill_f_o  = (branch_des & d_branch) | d_jal | d_jalr;
 
   assign cu_kill_d_o  = 'b0;
   assign cu_stall_d_o = cu_stall_f_o;
@@ -361,45 +374,21 @@ module miriscv_decode_stage
   logic [XLEN-1:0] branch_pc;
   logic [XLEN-1:0] jal_pc;
 
-  assign jalr_pc   = ( op1 + imm_i ) & ( ~'b1 );
-  assign branch_pc = f_current_pc_i  + imm_b;
-  assign jal_pc    = f_current_pc_i  + imm_j;
-
-  enum logic [3:0] {
-    PC_INCR,
-    PC_JAL,
-    PC_JALR,
-    PC_BRANCH,
-    PC_MRET,
-    PC_ECALL,
-    PC_FENCE,
-    PC_WFI,
-    PC_IRQ,
-    PC_EXCEPT
-  } next_pc_sel;
+  assign jalr_pc   = op1 + imm;
+  assign branch_pc = f_current_pc_i  + imm;
+  assign jal_pc    = f_current_pc_i  + imm;
 
 
   // IRQ > Exc > Branch = JALR = MRET > JAL = WFI
   always_comb begin
-    case ({branch_des, d_jalr, d_jal}) inside
-      3'b1??:  next_pc_sel = PC_BRANCH;
-      3'b01?:  next_pc_sel = PC_JALR;
-      3'b001:  next_pc_sel = PC_JAL;
-      default: next_pc_sel = PC_INCR;
+    case ({(branch_des & d_branch), d_jalr, d_jal}) inside
+      3'b1??:  cu_pc_bra_o = branch_pc;
+      3'b01?:  cu_pc_bra_o = jalr_pc;
+      3'b001:  cu_pc_bra_o = jal_pc;
+      default: cu_pc_bra_o = branch_pc;
     endcase
   end
 
-
-  always_comb begin
-    case (next_pc_sel)
-      PC_JAL:    cu_pc_bra_o = jal_pc;
-      PC_JALR:   cu_pc_bra_o = jalr_pc;
-      PC_BRANCH: cu_pc_bra_o = branch_pc;
-      default:   cu_pc_bra_o = branch_pc; // any value can be placed here
-    endcase
-  end
-
-  
   // RVFI INTERFACE
   if (RVFI) begin
     always_ff @(posedge clk_i or negedge arstn_i) begin
