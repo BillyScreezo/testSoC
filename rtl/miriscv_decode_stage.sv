@@ -208,15 +208,14 @@ module miriscv_decode_stage
   logic [XLEN-1:0] mdu_result;
   logic [XLEN-1:0] lsu_result;
 
-  always_comb begin
-    unique case (decode_wb_src_sel)
+  always_comb
+    (* full_case, parallel_case *) case (decode_wb_src_sel)
       ALU_DATA : ex_result = alu_result;
       MDU_DATA : ex_result = mdu_result;
       LSU_DATA : ex_result = lsu_result;
       PC_DATA  : ex_result = f_next_pc_i;
       IMM_DATA : ex_result = imm;
     endcase
-  end
 
   miriscv_alu alu (
     .alu_port_a_i      (op1                  ),
@@ -276,14 +275,12 @@ module miriscv_decode_stage
   always_ff @(posedge clk_i or negedge arstn_i) begin
     if(~arstn_i) begin
       boot_addr_load <= 2'b00;
-    end
-    else begin
+    end else begin
       boot_addr_load <= {boot_addr_load[0], 1'b1};
     end
   end
 
   assign cu_boot_addr_load_en_o = ~boot_addr_load[1];
-
 
   assign cu_stall_f_o = cu_boot_addr_load_en_o  | lsu_stall_req | mdu_stall_req;
   assign cu_kill_f_o  = (branch_des & d_branch) | d_jal | d_jalr;
