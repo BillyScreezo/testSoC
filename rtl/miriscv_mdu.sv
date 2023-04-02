@@ -29,10 +29,10 @@ module miriscv_mdu
   // Sign extention for multipliers //
   ////////////////////////////////////
 
-  logic  sign_a;
-  logic  sign_b;
-  assign sign_a = mdu_port_a_i[XLEN-1];
-  assign sign_b = mdu_port_b_i[XLEN-1];
+  // logic  sign_a;
+  // logic  sign_b;
+  // assign sign_a = mdu_port_a_i[XLEN-1];
+  // assign sign_b = mdu_port_b_i[XLEN-1];
 
   // used for both MUL and DIV
   logic b_is_zero;
@@ -57,53 +57,61 @@ module miriscv_mdu
     endcase
   end
 
-  logic signed [XLEN:0]     mul_operand_a;
-  logic signed [XLEN:0]     mul_operand_b;
-  logic signed [2*XLEN+1:0] mult_result_full;
+  // logic signed [XLEN:0]     mul_operand_a;
+  // logic signed [XLEN:0]     mul_operand_b;
+  // logic signed [2*XLEN+1:0] mult_result_full;
   logic        [2*XLEN-1:0] mult_result;
 
-  logic msb_a;
-  logic msb_b;
+  // logic msb_a;
+  // logic msb_b;
 
-  assign mul_operand_a = { msb_a, mdu_port_a_i };
-  assign mul_operand_b = { msb_b, mdu_port_b_i };
+  // assign mul_operand_a = { msb_a, mdu_port_a_i };
+  // assign mul_operand_b = { msb_b, mdu_port_b_i };
 
-  always_comb begin
-    case ( mdu_op_i )
-      MDU_MUL,
-      MDU_MULH: begin
-        msb_a = sign_a;
-        msb_b = sign_b;
-      end
-      MDU_MULHU: begin
-        msb_a = 1'b0;
-        msb_b = 1'b0;
-      end
-      MDU_MULHSU: begin
-        msb_a = sign_a;
-        msb_b = 1'b0;
-      end
-      default: begin
-        msb_a = 1'b0;
-        msb_b = 1'b0;
-      end
-    endcase
-  end
+  // always_comb begin
+  //   case ( mdu_op_i )
+  //     MDU_MUL,
+  //     MDU_MULH: begin
+  //       msb_a = sign_a;
+  //       msb_b = sign_b;
+  //     end
+  //     MDU_MULHU: begin
+  //       msb_a = 1'b0;
+  //       msb_b = 1'b0;
+  //     end
+  //     MDU_MULHSU: begin
+  //       msb_a = sign_a;
+  //       msb_b = 1'b0;
+  //     end
+  //     default: begin
+  //       msb_a = 1'b0;
+  //       msb_b = 1'b0;
+  //     end
+  //   endcase
+  // end
 
-  logic mult_stall;
+  logic mult_req, mult_stall;
+  logic mult_rdy;
 
 
   ////////////////////
   // Multiplication //
   ////////////////////
 
-  assign mult_stall = 1'b0;
+  assign mult_req   = mult_op & mdu_req_i;
+  assign mult_stall = mult_req & (~mult_rdy);
 
-  assign mult_result_full = mul_operand_a * mul_operand_b;
-  assign mult_result = mult_result_full[2*XLEN-1:0];
+  mult_32_32 mult_inst (
+    .clk(clk_i),    // Clock
+    .rst_n(arstn_i),  // Asynchronous reset active low
+    
+    .ai(mdu_port_a_i), 
+    .bi(mdu_port_b_i),
+    .r(mult_result),
 
-
-  
+    .req(mult_req),
+    .rdy(mult_rdy)
+);
 
 
   //////////////
