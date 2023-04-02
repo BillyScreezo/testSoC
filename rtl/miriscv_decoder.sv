@@ -156,9 +156,6 @@ module miriscv_decoder
   end
 
   always_comb begin
-    decode_jal_o    = 1'b0;
-    decode_jalr_o   = 1'b0;
-    decode_branch_o = 1'b0;
 
     unique case(opcode)
       S_OPCODE_LUI:   decode_ex_op1_sel_o = ZERO;
@@ -187,16 +184,11 @@ module miriscv_decoder
       default:        decode_wb_src_sel_o = (decode_ex_mdu_req_o) ? MDU_DATA : ALU_DATA;
     endcase
 
-    if(opcode[4:2] == 3'b110) begin
-      case(opcode[1:0])
-        2'b01:    decode_jalr_o   = !(ill_last_bits || ill_fence);
-        2'b11:    decode_jal_o    = !(ill_last_bits);
-        default:  decode_branch_o = !(ill_last_bits || ill_branch);
-      endcase
-    end
-
   end
 
+  assign decode_jal_o = (opcode == S_OPCODE_JAL) ? 1 : 0;
+  assign decode_jalr_o = (opcode == S_OPCODE_JALR) ? 1 : 0;
+  assign decode_branch_o = (opcode == S_OPCODE_BRANCH) ? 1 : 0;
 
 // Alu
 

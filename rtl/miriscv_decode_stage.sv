@@ -197,6 +197,15 @@ module miriscv_decode_stage
 
   // Immediate and signextend
 
+  logic [XLEN-1:0] imm;
+
+  miriscv_imm imm_inst (
+    .instr_i(f_instr_i),
+    .imm_o(imm)
+  );
+
+
+
   logic [XLEN-1:0] imm_i;
   logic [XLEN-1:0] imm_u;
   logic [XLEN-1:0] imm_s;
@@ -368,41 +377,17 @@ module miriscv_decode_stage
   assign branch_pc = f_current_pc_i  + imm_b;
   assign jal_pc    = f_current_pc_i  + imm_j;
 
-  enum logic [3:0] {
-    PC_INCR,
-    PC_JAL,
-    PC_JALR,
-    PC_BRANCH,
-    PC_MRET,
-    PC_ECALL,
-    PC_FENCE,
-    PC_WFI,
-    PC_IRQ,
-    PC_EXCEPT
-  } next_pc_sel;
-
 
   // IRQ > Exc > Branch = JALR = MRET > JAL = WFI
   always_comb begin
     case ({(branch_des & d_branch), d_jalr, d_jal}) inside
-      3'b1??:  next_pc_sel = PC_BRANCH;
-      3'b01?:  next_pc_sel = PC_JALR;
-      3'b001:  next_pc_sel = PC_JAL;
-      default: next_pc_sel = PC_INCR;
+      3'b1??:  cu_pc_bra_o = branch_pc;
+      3'b01?:  cu_pc_bra_o = jalr_pc;
+      3'b001:  cu_pc_bra_o = jal_pc;
+      default: cu_pc_bra_o = branch_pc;
     endcase
   end
 
-
-  always_comb begin
-    case (next_pc_sel)
-      PC_JAL:    cu_pc_bra_o = jal_pc;
-      PC_JALR:   cu_pc_bra_o = jalr_pc;
-      PC_BRANCH: cu_pc_bra_o = branch_pc;
-      default:   cu_pc_bra_o = branch_pc; // any value can be placed here
-    endcase
-  end
-
-  
   // RVFI INTERFACE
   if (RVFI) begin
     always_ff @(posedge clk_i or negedge arstn_i) begin
