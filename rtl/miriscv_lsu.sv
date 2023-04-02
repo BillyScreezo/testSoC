@@ -44,114 +44,55 @@ module miriscv_lsu
   logic [XLEN/4-1:0] data_be;
 
   assign data_req_o  = lsu_req_i & ~lsu_kill_i & ~data_rvalid_i;
-  assign data_addr_o = (lsu_req_i) ? lsu_addr_i : 'b0;
+  assign data_addr_o = lsu_addr_i;
   assign data_we_o   = lsu_we_i;
   assign data_be_o   = data_be;
   
   assign lsu_stall_o = data_req_o;
   
-
-
-  
   ///////////
   // Store //
   ///////////
 
-  
-  always_comb begin
-    case ( lsu_size_i )
-
-      MEM_ACCESS_WORD: begin
-        data_be = 'b1111;
-      end
-
-      MEM_ACCESS_UHALF,
-      MEM_ACCESS_HALF: begin
-        data_be = ( 'b0011 << lsu_addr_i[1:0] );
-      end
-
-      MEM_ACCESS_UBYTE,
-      MEM_ACCESS_BYTE: begin
-        data_be = ( 'b0001 << lsu_addr_i[1:0] );
-      end
-
-      default: begin
-        data_be = {(XLEN/4){1'b0}};
-      end
-
+  always_comb
+    (* full_case, parallel_case *) case ( lsu_size_i[1:0] )
+      2'h2:  data_be = 'b1111;
+      2'h1:  data_be = ( 'b0011 << lsu_addr_i[1:0] );
+      2'h0:  data_be = ( 'b0001 << lsu_addr_i[1:0] );
     endcase
 
-
-    case ( lsu_addr_i[1:0] )
-      2'b00:   data_wdata_o = { lsu_data_i[31:0] };
-      2'b01:   data_wdata_o = { lsu_data_i[23:0], lsu_data_i[31:24] };
-      2'b10:   data_wdata_o = { lsu_data_i[15:0], lsu_data_i[31:16] };
-      2'b11:   data_wdata_o = { lsu_data_i[ 7:0], lsu_data_i[31: 8] };
-      default: data_wdata_o = {XLEN{1'b0}};
+  always_comb
+    (* full_case, parallel_case *) case ( lsu_size_i[1:0] )
+      2'h0:   data_wdata_o = {4{lsu_data_i[7:0]}};
+      2'h1:   data_wdata_o = {2{lsu_data_i[15:0]}};
+      2'h2:   data_wdata_o = lsu_data_i;
     endcase
-  end
    
 
   //////////
   // Load //
   //////////
 
-  logic [XLEN-1:0] lsu_data;
+  always_comb
+    (* full_case, parallel_case *) case ( lsu_size_i[1:0] )
+      2'h2:
+        lsu_data_o = data_rdata_i[31:0];
 
-  always_comb begin
-    case ( lsu_size_i )
-
-      MEM_ACCESS_WORD: begin
-        case ( lsu_addr_i[1:0] )
-          2'b00:   lsu_data_o = data_rdata_i[31:0];
-          default: lsu_data_o = {XLEN{1'b0}};
+      2'h1:
+        (* full_case, parallel_case *) case ( lsu_addr_i[1:0] )
+          2'h0: lsu_data_o = { {(16){data_rdata_i[15] & ~lsu_size_i[2]}}, data_rdata_i[15:0] };
+          2'h2: lsu_data_o = { {(16){data_rdata_i[31] & ~lsu_size_i[2]}}, data_rdata_i[31:16] };
         endcase
-      end
 
-      MEM_ACCESS_HALF: begin
-        case ( lsu_addr_i[1:0] )
-          2'b00:   lsu_data_o = { {(XLEN-16){data_rdata_i[15]}}, data_rdata_i[15: 0] };
-          2'b01:   lsu_data_o = { {(XLEN-16){data_rdata_i[23]}}, data_rdata_i[23: 8] };
-          2'b10:   lsu_data_o = { {(XLEN-16){data_rdata_i[31]}}, data_rdata_i[31:16] };
-          default: lsu_data_o = {XLEN{1'b0}};
+      2'h0:
+        (* full_case, parallel_case *) case ( lsu_addr_i[1:0] )
+          2'h0: lsu_data_o = { {(24){data_rdata_i[7]  & ~lsu_size_i[2]}}, data_rdata_i[7  : 0] };
+          2'h1: lsu_data_o = { {(24){data_rdata_i[15] & ~lsu_size_i[2]}}, data_rdata_i[15 : 8] };
+          2'h2: lsu_data_o = { {(24){data_rdata_i[23] & ~lsu_size_i[2]}}, data_rdata_i[23 : 16] };
+          2'h3: lsu_data_o = { {(24){data_rdata_i[31] & ~lsu_size_i[2]}}, data_rdata_i[31 : 24] };
         endcase
-      end
-
-      MEM_ACCESS_BYTE: begin
-        case ( lsu_addr_i[1:0] )
-          2'b00:   lsu_data_o = { {(XLEN-8){data_rdata_i[ 7]}}, data_rdata_i[ 7: 0] };
-          2'b01:   lsu_data_o = { {(XLEN-8){data_rdata_i[15]}}, data_rdata_i[15: 8] };
-          2'b10:   lsu_data_o = { {(XLEN-8){data_rdata_i[23]}}, data_rdata_i[23:16] };
-          2'b11:   lsu_data_o = { {(XLEN-8){data_rdata_i[31]}}, data_rdata_i[31:24] };
-          default: lsu_data_o = {XLEN{1'b0}};
-        endcase
-      end
-
-      MEM_ACCESS_UHALF: begin
-        case ( lsu_addr_i[1:0] )
-          2'b00:   lsu_data_o = { {(XLEN-16){1'b0}}, data_rdata_i[15: 0] };
-          2'b01:   lsu_data_o = { {(XLEN-16){1'b0}}, data_rdata_i[23: 8] };
-          2'b10:   lsu_data_o = { {(XLEN-16){1'b0}}, data_rdata_i[31:16] };
-          default: lsu_data_o = {XLEN{1'b0}};
-        endcase
-      end
-
-      MEM_ACCESS_UBYTE: begin
-        case ( lsu_addr_i[1:0] )
-          2'b00:   lsu_data_o = { {(XLEN-8){1'b0}}, data_rdata_i[ 7: 0] };
-          2'b01:   lsu_data_o = { {(XLEN-8){1'b0}}, data_rdata_i[15: 8] };
-          2'b10:   lsu_data_o = { {(XLEN-8){1'b0}}, data_rdata_i[23:16] };
-          2'b11:   lsu_data_o = { {(XLEN-8){1'b0}}, data_rdata_i[31:24] };
-          default: lsu_data_o = {XLEN{1'b0}};
-        endcase
-      end
-
-      default: begin
-        lsu_data_o = {XLEN{1'b0}};
-      end
 
     endcase
-  end
  
 
 endmodule
