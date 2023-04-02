@@ -27,7 +27,7 @@ module miriscv_decoder
     output logic [2:0]  decode_mem_size_o,
     output logic        decode_mem_req_o,
 
-    output logic [2:0]  decode_wb_src_sel_o,
+    output logic [1:0]  decode_wb_src_sel_o,
 
     output              decode_wb_we_o,
 
@@ -181,7 +181,6 @@ module miriscv_decoder
     unique case(opcode)
       S_OPCODE_LOAD:  decode_wb_src_sel_o = LSU_DATA;
       S_OPCODE_JAL, S_OPCODE_JALR: decode_wb_src_sel_o = PC_DATA;
-      S_OPCODE_LUI: decode_wb_src_sel_o = IMM_DATA;
       default:        decode_wb_src_sel_o = (decode_ex_mdu_req_o) ? MDU_DATA : ALU_DATA;
     endcase
 

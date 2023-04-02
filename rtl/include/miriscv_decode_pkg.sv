@@ -10,11 +10,10 @@
 
 package  miriscv_decode_pkg;
 
-  parameter ALU_DATA   = 3'd0;
-  parameter MDU_DATA   = 3'd1;
-  parameter LSU_DATA   = 3'd2;
-  parameter PC_DATA    = 3'd3;
-  parameter IMM_DATA   = 3'd4;
+  parameter ALU_DATA   = 2'd0;
+  parameter MDU_DATA   = 2'd1;
+  parameter LSU_DATA   = 2'd2;
+  parameter PC_DATA    = 2'd3;
 
   parameter RS1_DATA   = 2'd0;
   parameter CURRENT_PC = 2'd1;
