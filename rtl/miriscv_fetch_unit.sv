@@ -67,7 +67,7 @@ module miriscv_fetch_unit
   
 
 
-  assign instr_req_o  = ~cu_boot_addr_load_en_i & ~cu_stall_f_i & ~instr_rvalid_i & ~cu_kill_f_i;
+  assign instr_req_o  = ~(cu_boot_addr_load_en_i | cu_stall_f_i | instr_rvalid_i | cu_kill_f_i);//~cu_boot_addr_load_en_i & ~cu_stall_f_i & ~instr_rvalid_i & ~cu_kill_f_i;
   assign instr_addr_o = pc_reg;
 
 
