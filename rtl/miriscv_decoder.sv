@@ -15,8 +15,8 @@ module miriscv_decoder
     output              decode_rs1_re_o,
     output              decode_rs2_re_o,
 
-    output logic [1:0]  decode_ex_op1_sel_o,
-    output logic [1:0]  decode_ex_op2_sel_o,
+    output logic        decode_ex_op1_sel_o,
+    output logic        decode_ex_op2_sel_o,
 
     output logic [3:0]  decode_alu_operation_o,
 
@@ -50,94 +50,37 @@ module miriscv_decoder
   logic [6:0] funct7;
   logic [4:0] opcode;
   logic [2:0] funct3;
-  logic ill_fence, ill_op, ill_opimm, ill_load, ill_store, ill_branch,
-  // ill_fence = ill_fence_or_jalr: for illegal jalr and illegal fence is sufficient to use just one signal (by ISA design) 
-        ill_opcode, ill_op_mul, ill_op_s, ill_op_others, ill_last_bits;
+  logic ill_fence, ill_op, ill_opimm, ill_load, ill_store, ill_branch, ill_opcode, ill_op_mul, ill_op_s, ill_op_others, ill_last_bits;
 
   assign opcode = decode_instr_i[6:2];
   assign funct3 = decode_instr_i[14:12];
   assign funct7 = decode_instr_i[31:25];
 
-  assign decode_rs1_re_o        = (decode_ex_op1_sel_o == RS1_DATA) && !decode_illegal_instr_o;
-  assign decode_rs2_re_o        = (decode_ex_op2_sel_o == RS2_DATA) && !decode_illegal_instr_o;
+  assign decode_rs1_re_o        = (decode_ex_op1_sel_o == 1'b0) && !decode_illegal_instr_o;
+  assign decode_rs2_re_o        = (decode_ex_op2_sel_o == 1'b0) && !decode_illegal_instr_o;
   assign decode_ex_mdu_req_o    = (opcode == S_OPCODE_OP) && (funct7 == 1'b1) && !(ill_last_bits || ill_op_mul);
-  assign decode_wb_we_o         = !((opcode == S_OPCODE_FENCE) || decode_illegal_instr_o ||
-                                    (opcode[3:0] == 4'b1000)); // STORE or BRANCH
+  assign decode_wb_we_o         = !((opcode == S_OPCODE_FENCE) || decode_illegal_instr_o || (opcode[3:0] == 4'b1000)); // STORE or BRANCH
 
-  assign decode_mem_req_o       = ((opcode == S_OPCODE_LOAD) || (opcode == S_OPCODE_STORE)) &&
-                                    !(ill_load|| ill_store || ill_last_bits);
-
+  assign decode_mem_req_o       = ((opcode == S_OPCODE_LOAD) || (opcode == S_OPCODE_STORE)) && !(ill_load|| ill_store || ill_last_bits);
   assign decode_mem_we_o        = (opcode == S_OPCODE_STORE) && !(ill_store || ill_last_bits);
+  assign decode_load_o          = ((opcode == S_OPCODE_LOAD)) && !(ill_load || ill_last_bits);
 
-
-  assign decode_load_o          = ((opcode == S_OPCODE_LOAD)) &&
-                                    !(ill_load || ill_last_bits);
-
-  assign decode_illegal_instr_o = ill_fence || ill_op || ill_opimm ||
-                                  ill_load || ill_store || ill_branch ||
-                                  ill_opcode || ill_last_bits;
+  assign ill_last_bits = (decode_instr_i[1:0] != 2'b11);
+  assign decode_illegal_instr_o = ill_fence || ill_op || ill_opimm || ill_load || ill_store || ill_branch || ill_opcode || ill_last_bits;
 
   assign decode_fence_o         = (opcode == S_OPCODE_FENCE) && !(ill_fence || ill_last_bits);
 
-  assign ill_last_bits = (decode_instr_i[1:0] != 2'b11);
+  assign ill_fence      = (opcode == S_OPCODE_FENCE || opcode == S_OPCODE_JALR) && (funct3 != 3'b0);
+  assign ill_op_others  = (funct7 != 7'd0 && funct7 != 7'b010_0000 && funct7 != 3'd1);
+  assign ill_op_s       = (funct7 == 7'b010_0000 && funct3 != 3'b000 && funct3 != 3'b101);
+  assign ill_op_mul     = (funct7 == 7'd1 && !RV32M);
+  assign ill_op         = (opcode == S_OPCODE_OP) && (ill_op_others || ill_op_s || ill_op_mul);
+  assign ill_opimm      = (opcode == S_OPCODE_OPIMM) && ((funct3[1:0] == 2'b01 && {funct7[6], funct7[4:0]} != 6'd0) || (funct3 == 3'b001 && funct7[5] == 1'b1));
+  assign ill_load       = (opcode == S_OPCODE_LOAD) && (funct3 == 3 || funct3 > 5);
+  assign ill_store      = (opcode == S_OPCODE_STORE) && (funct3 > 2);
+  assign ill_branch     = (opcode == S_OPCODE_BRANCH) && (funct3 == 3'b010 || funct3 == 3'b011);
 
   always_comb begin
-    ill_fence     = 1'b0;
-    ill_op        = 1'b0;
-    ill_opimm     = 1'b0;
-    ill_load      = 1'b0;
-    ill_store     = 1'b0;
-    ill_branch    = 1'b0;
-    ill_op_mul    = 1'b0;
-    ill_op_s      = 1'b0;
-    ill_op_others = 1'b0;
-
-    if(opcode == S_OPCODE_FENCE || opcode == S_OPCODE_JALR) begin
-      if(funct3 != 3'b0) begin
-        ill_fence = 1'b1;
-      end
-    end
-
-    if(funct7 != 7'd0 && funct7 != 7'b010_0000 && funct7 != 3'd1) begin
-      ill_op_others = 1'b1;
-    end
-
-    if(funct7 == 7'b010_0000 && funct3 != 3'b000 && funct3 != 3'b101) begin
-      ill_op_s = 1'b1;
-    end
-
-    if(funct7 == 7'd1 && !RV32M) begin
-      ill_op_mul = 1'b1;
-    end
-
-    if(opcode == S_OPCODE_OP) begin
-      ill_op = ill_op_others || ill_op_s || ill_op_mul;
-    end
-
-    if(opcode == S_OPCODE_OPIMM) begin
-      if((funct3[1:0] == 2'b01 && {funct7[6], funct7[4:0]} != 6'd0) ||
-         (funct3 == 3'b001 && funct7[5] == 1'b1)) begin
-        ill_opimm = 1'b1;
-      end
-    end
-
-    if(opcode == S_OPCODE_LOAD) begin
-      if(funct3 == 3 || funct3 > 5) begin
-        ill_load = 1'b1;
-      end
-    end
-
-    if(opcode == S_OPCODE_STORE) begin
-      if(funct3 > 2) begin
-          ill_store = 1'b1;
-      end
-    end
-
-    if(opcode == S_OPCODE_BRANCH) begin
-      if(funct3 == 3'b010 || funct3 == 3'b011) begin
-        ill_branch = 1'b1;
-      end
-    end
 
     case(opcode)
       S_OPCODE_FENCE : ill_opcode = 1'b0;
@@ -158,38 +101,28 @@ module miriscv_decoder
   always_comb begin
 
     unique case(opcode)
-      S_OPCODE_LUI:   decode_ex_op1_sel_o = ZERO;
-      S_OPCODE_AUIPC: decode_ex_op1_sel_o = CURRENT_PC;
-      S_OPCODE_JAL:    decode_ex_op1_sel_o = ZERO;
-      S_OPCODE_FENCE:  decode_ex_op1_sel_o = ZERO;
-
-      default:        decode_ex_op1_sel_o = RS1_DATA;
+      S_OPCODE_AUIPC: decode_ex_op1_sel_o = 1'b1;
+      default:        decode_ex_op1_sel_o = 1'b0;
     endcase
 
     unique case(opcode)
-      S_OPCODE_OP,
-      S_OPCODE_BRANCH,
-      S_OPCODE_STORE:   decode_ex_op2_sel_o = RS2_DATA;
-      S_OPCODE_AUIPC,
-      S_OPCODE_LUI:     decode_ex_op2_sel_o = IMM_U;
-      S_OPCODE_JAL,
-      S_OPCODE_JALR:    decode_ex_op2_sel_o = NEXT_PC;
-      default:          decode_ex_op2_sel_o = IMM_I;
+      S_OPCODE_OPIMM, S_OPCODE_AUIPC:   decode_ex_op2_sel_o = 1'b1;
+      default:                          decode_ex_op2_sel_o = 1'b0;
 
     endcase
 
     unique case(opcode)
-      S_OPCODE_LOAD:  decode_wb_src_sel_o = LSU_DATA;
-      S_OPCODE_JAL, S_OPCODE_JALR: decode_wb_src_sel_o = PC_DATA;
-      S_OPCODE_LUI: decode_wb_src_sel_o = IMM_DATA;
-      default:        decode_wb_src_sel_o = (decode_ex_mdu_req_o) ? MDU_DATA : ALU_DATA;
+      S_OPCODE_LOAD:                decode_wb_src_sel_o = LSU_DATA;
+      S_OPCODE_JAL, S_OPCODE_JALR:  decode_wb_src_sel_o = PC_DATA;
+      S_OPCODE_LUI:                 decode_wb_src_sel_o = IMM_DATA;
+      default:                      decode_wb_src_sel_o = (decode_ex_mdu_req_o) ? MDU_DATA : ALU_DATA;
     endcase
 
   end
 
-  assign decode_jal_o = (opcode == S_OPCODE_JAL) ? 1 : 0;
-  assign decode_jalr_o = (opcode == S_OPCODE_JALR) ? 1 : 0;
-  assign decode_branch_o = (opcode == S_OPCODE_BRANCH) ? 1 : 0;
+  assign decode_jal_o     = (opcode == S_OPCODE_JAL) ? 1 : 0;
+  assign decode_jalr_o    = (opcode == S_OPCODE_JALR) ? 1 : 0;
+  assign decode_branch_o  = (opcode == S_OPCODE_BRANCH) ? 1 : 0;
 
 // Alu
 
