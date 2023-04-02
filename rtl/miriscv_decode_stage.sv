@@ -201,10 +201,8 @@ module miriscv_decode_stage
   assign op1 = decode_ex_op1_sel ? f_current_pc_i : r1_data;
   assign op2 = decode_ex_op2_sel ? imm            : r2_data;
 
- 
-  assign decode_mem_data     = op2;
-  assign decode_mem_addr     = r1_data + imm;
-
+  assign decode_mem_data = op2;
+  assign decode_mem_addr = r1_data + imm;
 
   logic [XLEN-1:0] alu_result;
   logic [XLEN-1:0] mdu_result;
@@ -212,7 +210,7 @@ module miriscv_decode_stage
 
   always_comb begin
     unique case (decode_wb_src_sel)
-      ALU_DATA : ex_result = alu_result; // This needs a readable parameter
+      ALU_DATA : ex_result = alu_result;
       MDU_DATA : ex_result = mdu_result;
       LSU_DATA : ex_result = lsu_result;
       PC_DATA  : ex_result = f_next_pc_i;
@@ -242,8 +240,6 @@ module miriscv_decode_stage
     .mdu_result_o    (mdu_result                       ),
     .mdu_stall_req_o (mdu_stall_req                    )
   );
-
-
 
   miriscv_lsu lsu (
     // clock, reset
@@ -275,11 +271,6 @@ module miriscv_decode_stage
   );
 
   // Control Unit
-
-  //
-  //     Program counter control
-  //
-
   logic [1:0] boot_addr_load;
 
   always_ff @(posedge clk_i or negedge arstn_i) begin
@@ -294,28 +285,15 @@ module miriscv_decode_stage
   assign cu_boot_addr_load_en_o = ~boot_addr_load[1];
 
 
-  assign cu_stall_f_o = cu_boot_addr_load_en_o | lsu_stall_req | mdu_stall_req;
+  assign cu_stall_f_o = cu_boot_addr_load_en_o  | lsu_stall_req | mdu_stall_req;
   assign cu_kill_f_o  = (branch_des & d_branch) | d_jal | d_jalr;
 
   assign cu_kill_d_o  = 'b0;
   assign cu_stall_d_o = cu_stall_f_o;
 
   // precompute PC values in case of jump
-  logic [XLEN-1:0] jalr_pc;
-  logic [XLEN-1:0] branch_pc;
+  assign cu_pc_bra_o = d_jalr ? op1 + imm : f_current_pc_i  + imm;
 
-  assign jalr_pc   = op1 + imm;
-  assign branch_pc = f_current_pc_i  + imm;
-
-  // IRQ > Exc > Branch = JALR = MRET > JAL = WFI
-  always_comb begin
-    case ({(branch_des & d_branch), d_jalr, d_jal}) inside
-      3'b1??:  cu_pc_bra_o = branch_pc;
-      3'b01?:  cu_pc_bra_o = jalr_pc;
-      3'b001:  cu_pc_bra_o = branch_pc;
-      default: cu_pc_bra_o = branch_pc;
-    endcase
-  end
 
   // RVFI INTERFACE
   if (RVFI) begin
