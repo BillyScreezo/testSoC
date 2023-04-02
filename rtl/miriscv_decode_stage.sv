@@ -93,7 +93,7 @@ module miriscv_decode_stage
   logic        decode_csr_src_sel;
   logic        decode_csr_req;
 
-  logic [1:0]  decode_wb_src_sel;
+  logic [2:0]  decode_wb_src_sel;
   logic        decode_wb_we;
 
   logic [XLEN-1:0] decode_mem_addr_imm;
@@ -262,15 +262,15 @@ module miriscv_decode_stage
   always_comb begin
     unique case (decode_ex_op2_sel)
       RS2_DATA: op2 = r2_data;
-      IMM_I:    op2 = imm_i;
-      IMM_U:    op2 = imm_u;
+      IMM_I:    op2 = imm;
+      IMM_U:    op2 = imm;
       NEXT_PC:  op2 = f_next_pc_i;
     endcase
   end
 
   assign decode_mem_data     = op2;
-  assign decode_mem_addr_imm = decode_load ? imm_i : imm_s;
-  assign decode_mem_addr     = r1_data + decode_mem_addr_imm;
+  // assign decode_mem_addr_imm = decode_load ? imm_i : imm_s;
+  assign decode_mem_addr     = r1_data + imm;
 
 
   
@@ -285,6 +285,7 @@ module miriscv_decode_stage
       MDU_DATA : ex_result = mdu_result;
       LSU_DATA : ex_result = lsu_result;
       PC_DATA  : ex_result = f_next_pc_i;
+      IMM_DATA : ex_result = imm;
     endcase
   end
 
@@ -373,9 +374,9 @@ module miriscv_decode_stage
   logic [XLEN-1:0] branch_pc;
   logic [XLEN-1:0] jal_pc;
 
-  assign jalr_pc   = ( op1 + imm_i ) & ( ~'b1 );
-  assign branch_pc = f_current_pc_i  + imm_b;
-  assign jal_pc    = f_current_pc_i  + imm_j;
+  assign jalr_pc   = op1 + imm;
+  assign branch_pc = f_current_pc_i  + imm;
+  assign jal_pc    = f_current_pc_i  + imm;
 
 
   // IRQ > Exc > Branch = JALR = MRET > JAL = WFI
