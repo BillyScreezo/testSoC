@@ -77,6 +77,11 @@ module miriscv_mdu
     endcase
   end
 
+  // always_ff @(posedge clk_i) // Проверка: есть ли операции умножения со старшей частью в результат
+  //   if((mult_req) && (mdu_op_i != '0))
+  //     $display("Time is %t", $time());
+    
+
   smult_32_32 smult_32_32_inst (
       .clk      (clk_i),    // Clock
       .rst_n    (arstn_i),  // Asynchronous reset active low

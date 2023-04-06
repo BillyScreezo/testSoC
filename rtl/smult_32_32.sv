@@ -9,7 +9,11 @@ module smult_32_32 (
 		output 	logic 				rdy
 );
 
-	localparam int PIPE_SIZE = 5;
+// ==============================================
+// ===================== Defines
+// ==============================================
+	localparam int PIPE_SIZE = 5;		// Задержка полного умножения
+	localparam int SHORT_PIPES = 2;		// Задержка сокращенного умножения
 
 	logic [63:0] hr, lr;	// Результат умножения полноценный/сокращённый
 
@@ -21,7 +25,8 @@ module smult_32_32 (
 	logic [31:0] a1_b2;
 	logic [27:0] a2_b2;
 
-	logic [63:0] pre_summ_l, pre_summ_r, summ;
+	logic [45:0] pre_summ_l; 
+	logic [63:0] pre_summ_r, summ;
 
 	logic [17:0] a1, b1;
 	logic [13:0] a2, b2; // Урезанные части операндов
@@ -30,6 +35,11 @@ module smult_32_32 (
 
 	logic [$clog2(PIPE_SIZE)-1:0] pipe_cnt;
 
+	logic little_mult;	// Сигнал готовности умножения младших частей
+
+// ==============================================
+// ===================== Преобразование входных операндов
+// ==============================================
 // Преобразование операндов
 	assign sign_a = ai[32];
 	assign sign_b = bi[32];
@@ -49,6 +59,9 @@ module smult_32_32 (
 		b2 <= bu[31:18];
 	end
 
+// ==============================================
+// ===================== Умножение
+// ==============================================
 // Промежуточные операции на dsp
 	always_ff @(posedge clk) begin
 		a1_b1 <= a1 * b1;
@@ -57,17 +70,24 @@ module smult_32_32 (
 		a2_b2 <= a2 * b2;
 	end
 
+// ==============================================
+// ===================== Суммирование
+// ==============================================
+// Суммирование промежуточных умножений
 	always_ff @(posedge clk) begin
-		pre_summ_l <= {a1_b2, 18'h0} + {a2_b1, 18'h0};
-		pre_summ_r <= a1_b1 + {a2_b2, 36'h0};
+		pre_summ_l <= a1_b2 + a2_b1;
+		pre_summ_r <= {a2_b2, a1_b1};
 
-		summ <= pre_summ_l + pre_summ_r;
+		summ <= {pre_summ_l + pre_summ_r[63:18], pre_summ_r[17:0]};
 	end
 
-// Преобразование результата
+// Преобразование результата при полном умножении
 	assign hr = ((sign_a && sign_b) || (!sign_a && !sign_b)) ? summ : -summ;
 
-// Логика выдачи готовности
+// ==============================================
+// ===================== Логика выдачи результата
+// ==============================================
+// Счётчик задержки умножителя
 	always_ff @(posedge clk or negedge rst_n)
 		if(!rst_n)
 			pipe_cnt <= '0;
@@ -77,23 +97,34 @@ module smult_32_32 (
 			else if(req)
 				pipe_cnt <= pipe_cnt + 1'b1;
 
+// Логика сигнала готовности
 	always_ff @(posedge clk or negedge rst_n)
 		if(!rst_n)
 			rdy <= '0;
 		else
-			if((pipe_cnt == 2) && little_mult)
+			if((pipe_cnt == SHORT_PIPES) && little_mult)		// Сокращённое умножение
 				rdy <= '1;
-			else
-				rdy <= (pipe_cnt == PIPE_SIZE - 1);
+			else begin
+				rdy <= (pipe_cnt == PIPE_SIZE - 1);				// Полное умножение
 
+				// if((pipe_cnt == PIPE_SIZE - 1)) begin // Проверка: есть ли полноценные умножения в кормарке
+				// 	$timeformat(-6, 4, " us");
+				// 	$display("Full mult time is %t", $time());
+				// end
+			end
+				
 
-	logic little_mult;
-
+// ==============================================
+// ===================== Сокращенное умножение
+// ==============================================
+// Если старшие части модулей операндов не содержат единиц, то возможно сокращённое умножение
 	assign little_mult = ~((|au[31:18]) | (|bu[31:18]));
-	assign a1_b1_lr = ((sign_a && sign_b) || (!sign_a && !sign_b)) ? a1_b1 : -a1_b1;
-	assign lr = {{28{a1_b1_lr[35]}}, a1_b1_lr};
 
-	// assign r = little_mult ? lr : hr;
+// Преобразование результата при сокращённом умножении
+	assign a1_b1_lr = ((sign_a && sign_b) || (!sign_a && !sign_b)) ? a1_b1 : -a1_b1;
+
+// Сокращенное умножение, знакорасширение
+	assign lr = {{28{a1_b1_lr[35]}}, a1_b1_lr};
 
 	always_ff @(posedge clk)
 		r <= little_mult ? lr : hr;
