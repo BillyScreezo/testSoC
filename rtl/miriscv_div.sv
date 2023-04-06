@@ -66,7 +66,7 @@ module miriscv_div
   end
 
   always_comb begin
-    case ( d_state )
+    (* full_case, parallel_case *) case ( d_state )
 
       DIV_IDLE: begin
         if ( div_start_i )
@@ -108,11 +108,6 @@ module miriscv_div
         else
           d_next_state = DIV_FINISH;
       end
-
-      default: begin
-        d_next_state = DIV_IDLE;
-      end
-
     endcase
   end
 
@@ -189,18 +184,10 @@ module miriscv_div
       end
 
       always_ff @( posedge clk_i ) begin
-        if ( ~arstn_i ) begin
-          div_result    <= {XLEN{1'b0}};
-          rem_result    <= {(2*XLEN+1){1'b0}};
-          div_operand_a <= {(XLEN){1'b0}};
-          div_operand_b <= {(XLEN){1'b0}};
-          sign_inv      <= 1'b0;
-          iter          <= {($clog2(XLEN)){1'b0}};
-        end
-        else begin
+
           rem_result[2*XLEN:XLEN] <= dsp48_P[XLEN:0];
 
-          case ( d_state )
+          (* full_case, parallel_case *) case ( d_state )
 
             DIV_IDLE: begin
               case ( mdu_op_i )
@@ -246,26 +233,14 @@ module miriscv_div
             DIV_SIGN_CHANGE: begin
               div_result <= ~div_result + 'd1;
             end
-
-            default: ;
           endcase
-        end
       end
-
     end
     else if ( DIV_IMPLEMENTATION == "GENERIC" ) begin
 
       always_ff @( posedge clk_i ) begin
-        if ( ~arstn_i ) begin
-          div_result    <= {XLEN{1'b0}};
-          rem_result    <= {(2*XLEN+1){1'b0}};
-          div_operand_a <= {(XLEN){1'b0}};
-          div_operand_b <= {(XLEN){1'b0}};
-          sign_inv      <= 1'b0;
-          iter          <= {($clog2(XLEN)){1'b0}};
-        end
-        else begin
-          case ( d_state )
+
+          (* full_case, parallel_case *) case ( d_state )
 
             DIV_IDLE: begin
               case ( mdu_op_i )
@@ -325,10 +300,7 @@ module miriscv_div
               rem_result[2*XLEN:XLEN] <= ~rem_result[2*XLEN:XLEN] + 'd1;
               div_result <= ~div_result + 'd1;
             end
-
-            default: ;
           endcase
-        end
       end
 
     end

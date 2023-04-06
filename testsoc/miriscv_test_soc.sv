@@ -28,7 +28,7 @@ import miriscv_pkg::ILEN;
   logic [XLEN-1:0]    core_data_addr;
   logic [XLEN-1:0]    core_data_wdata;
 
-  logic               dmem_data_rvalid;
+  // logic               dmem_data_rvalid;
   logic [XLEN-1:0]    dmem_data_rdata;
   logic               dmem_data_req;
   logic               dmem_data_we;
@@ -58,13 +58,13 @@ import miriscv_pkg::ILEN;
   assign dmem_data_addr  = core_data_addr;
   assign dmem_data_wdata = core_data_wdata;
 
-  assign uart_psel       = ((core_data_addr[31] == 'b1) && (core_data_addr[12] != 'b1)) ? 1'b1 : 'b0;
+  assign uart_psel       = ((core_data_addr[31] == 'b1) && (core_data_addr[12] != 'b1));
   assign uart_penable    = uart_psel;
   assign uart_pwrite     = core_data_we;
   assign uart_paddr      = core_data_addr;
   assign uart_pwdata     = core_data_wdata;
 
-  assign timer_psel       = ((core_data_addr[31] == 'b1) && (core_data_addr[12] == 'b1)) ? 1'b1 : 'b0;
+  assign timer_psel       = ((core_data_addr[31] == 'b1) && (core_data_addr[12] == 'b1));
   assign timer_penable    = timer_psel;
   assign timer_pwrite     = core_data_we;
   assign timer_paddr      = core_data_addr;
@@ -118,7 +118,6 @@ miriscv_ram
 ram
 (
   .clk_i          ( clk_i        ),
-  .arstn_i        ( arstn_i      ),
   
   // instruction memory interface
   .instr_rvalid_o ( instr_rvalid ),
@@ -127,7 +126,7 @@ ram
   .instr_addr_i   ( instr_addr   ),
 
   // data memory interface
-  .data_rvalid_o  ( dmem_data_rvalid  ),
+  // .data_rvalid_o  ( dmem_data_rvalid  ),
   .data_rdata_o   ( dmem_data_rdata   ),
   .data_req_i     ( dmem_data_req     ),
   .data_we_i      ( dmem_data_we      ),

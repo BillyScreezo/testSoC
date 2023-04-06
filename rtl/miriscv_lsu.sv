@@ -14,7 +14,6 @@ module miriscv_lsu
 (
   // clock, reset
   input                             clk_i,
-  input                             arstn_i,
 
   // data memory interface
   input                             data_rvalid_i,

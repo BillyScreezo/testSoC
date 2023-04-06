@@ -30,8 +30,9 @@ module miriscv_mdu
   ////////////////////////////////////
 
   // used for both MUL and DIV
-  logic b_is_zero;
+  logic b_is_zero, a_is_zero;
   assign b_is_zero = ~|mdu_port_b_i;
+  assign a_is_zero = ~|mdu_port_a_i;
 
   logic mult_op;
 
@@ -45,6 +46,8 @@ module miriscv_mdu
   ////////////////////
   // Multiplication //
   ////////////////////
+
+  logic zero_mult;
 
   logic [2*XLEN-1:0] mult_result;
   logic sign_a, sign_b;
@@ -77,6 +80,12 @@ module miriscv_mdu
     endcase
   end
 
+  // always_ff @(posedge clk_i) // Проверка: есть ли операции умножения со старшей частью в результат
+  //   if((mult_req) && (mdu_op_i != '0))
+  //     $display("Time is %t", $time());
+
+  assign zero_mult = a_is_zero | b_is_zero;
+
   smult_32_32 smult_32_32_inst (
       .clk      (clk_i),    // Clock
       .rst_n    (arstn_i),  // Asynchronous reset active low
@@ -86,7 +95,9 @@ module miriscv_mdu
       .r        (mult_result),
 
       .req      (mult_req),
-      .rdy      (mult_rdy)
+      .rdy      (mult_rdy),
+
+      .zf       (zero_mult)
   );
 
   //////////////
@@ -101,14 +112,8 @@ module miriscv_mdu
   assign div_start = !mult_op && mdu_req_i;
 
   logic b_zero_flag;
-  always_ff @( posedge clk_i or negedge arstn_i ) begin
-    if ( ~arstn_i ) begin
-      b_zero_flag <= 1'b0;
-    end
-    else begin
+  always_ff @( posedge clk_i )
       b_zero_flag <= b_is_zero;
-    end
-  end
 
   miriscv_div #(
     .DIV_IMPLEMENTATION( "GENERIC" )
