@@ -51,7 +51,7 @@ module miriscv_fetch_unit
 
   always_ff @(posedge clk_i or negedge arstn_i) begin
     if ( ~arstn_i ) begin
-      pc_reg <= {XLEN{1'b0}}; // Reset value here
+      pc_reg <= '0; // Reset value here
     end
     else if ( cu_boot_addr_load_en_i ) begin
       pc_reg <= boot_addr_i;
@@ -74,7 +74,7 @@ module miriscv_fetch_unit
   assign fetched_pc_addr_o       = pc_reg;
   assign fetched_pc_next_addr_o  = pc_plus_inc; 
   assign instr_o                 = instr_rdata_i;
-  assign fetch_rvalid_o          = instr_rvalid_i & ~cu_kill_f_i & ~cu_stall_f_i;
+  assign fetch_rvalid_o          = instr_rvalid_i & ~(cu_kill_f_i | cu_stall_f_i);
 
 
   

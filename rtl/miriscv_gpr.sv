@@ -16,7 +16,6 @@
 
   // Clocking
   input                               clk_i,
-  input                               arstn_i,
 
   // Write port
   input                               wr_en_i,

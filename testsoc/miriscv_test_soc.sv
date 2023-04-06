@@ -118,7 +118,6 @@ miriscv_ram
 ram
 (
   .clk_i          ( clk_i        ),
-  .arstn_i        ( arstn_i      ),
   
   // instruction memory interface
   .instr_rvalid_o ( instr_rvalid ),

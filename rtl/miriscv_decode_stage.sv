@@ -161,7 +161,6 @@ module miriscv_decode_stage
 
   miriscv_gpr  gpr (
     .clk_i      (clk_i        ),
-    .arstn_i    (arstn_i      ),
 
     .wr_en_i    (gpr_wr_en    ),
     .wr_addr_i  (gpr_wr_addr  ),
@@ -231,7 +230,6 @@ module miriscv_decode_stage
   miriscv_lsu lsu (
     // clock, reset
     .clk_i                   (clk_i                      ),
-    .arstn_i                 (arstn_i                    ),
 
     // data memory interface
     .data_rvalid_i           (data_rvalid_i              ),
@@ -261,7 +259,7 @@ module miriscv_decode_stage
 
   always_ff @(posedge clk_i or negedge arstn_i) begin
     if(~arstn_i) begin
-      boot_addr_load <= 2'b00;
+      boot_addr_load <= '0;
     end else begin
       boot_addr_load <= {boot_addr_load[0], 1'b1};
     end

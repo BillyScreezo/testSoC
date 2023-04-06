@@ -8,7 +8,6 @@ module miriscv_ram
   ) 
   (
     input   logic 	             clk_i,
-    input   logic                arstn_i,
   
     // instruction memory interface
     output   logic               instr_rvalid_o,
@@ -26,35 +25,24 @@ module miriscv_ram
     input    logic [31:0]        data_wdata_i
     );
 
-   genvar 	     i;
+  genvar 	     i;
 
-   reg [31:0]         imem [0:RAM_SIZE/4-1];
-   reg [31:0]         dmem [0:RAM_SIZE/4-1];
-    
+  logic [31:0] imem [0:RAM_SIZE/4-1];
+  logic [31:0] dmem [0:RAM_SIZE/4-1];
 
-   integer         f, addr;
-   reg[31:0]           data;
-   reg [8*20-1:0]      cmd;
-   
   integer iram_index;
   integer dram_index; 
    
-  initial begin
-    for (iram_index = 0; iram_index < RAM_SIZE/4-1; iram_index = iram_index + 1)
-      imem[iram_index] = {32{1'b0}};
+  initial 
     if(IRAM_INIT_FILE != "")    
       $readmemh(IRAM_INIT_FILE, imem);
-  end
 
-  initial begin
-    for (dram_index = 0; dram_index < RAM_SIZE/4-1; dram_index = dram_index + 1)
-      dmem[dram_index] = {32{1'b0}};
+  initial
     if(DRAM_INIT_FILE != "")    
       $readmemh(DRAM_INIT_FILE, dmem);
-  end
 
 
-  always@(posedge clk_i) begin
+  always_ff @(posedge clk_i) begin
     instr_rdata_o  <= imem[(instr_addr_i / 4) % RAM_SIZE];
     instr_rvalid_o <= instr_req_i;
   end

@@ -74,16 +74,16 @@ module miriscv_fetch_stage
   always_ff @(posedge clk_i or negedge arstn_i) begin
     if(~arstn_i) begin
       f_instr_o                 <= { {(ILEN-8){1'b0}}, 8'h13 }; // ADDI x0, x0, 0 - NOP
-      f_current_pc_o            <= {XLEN{1'b0}};
-      f_next_pc_o               <= {XLEN{1'b0}};
-      f_valid_o                 <= 1'b0;
+      f_current_pc_o            <= '0;
+      f_next_pc_o               <= '0;
+      f_valid_o                 <= '0;
     end
 
     else if (cu_kill_f_i) begin
       f_instr_o                 <= { {(ILEN-8){1'b0}}, 8'h13 };
-      f_current_pc_o            <= {XLEN{1'b0}};
-      f_next_pc_o               <= {XLEN{1'b0}};
-      f_valid_o                 <= 1'b0;
+      f_current_pc_o            <= '0;
+      f_next_pc_o               <= '0;
+      f_valid_o                 <= '0;
     end
 
     else if (~cu_stall_f_i) begin

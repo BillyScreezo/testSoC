@@ -112,14 +112,8 @@ module miriscv_mdu
   assign div_start = !mult_op && mdu_req_i;
 
   logic b_zero_flag;
-  always_ff @( posedge clk_i or negedge arstn_i ) begin
-    if ( ~arstn_i ) begin
-      b_zero_flag <= 1'b0;
-    end
-    else begin
+  always_ff @( posedge clk_i )
       b_zero_flag <= b_is_zero;
-    end
-  end
 
   miriscv_div #(
     .DIV_IMPLEMENTATION( "GENERIC" )
