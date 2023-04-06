@@ -6,7 +6,9 @@ module smult_32_32 (
 		output 	logic  		 [63:0] r,
 
 		input 	logic 				req,
-		output 	logic 				rdy
+		output 	logic 				rdy,
+
+		input 	logic 				zf
 );
 
 // ==============================================
@@ -102,7 +104,9 @@ module smult_32_32 (
 		if(!rst_n)
 			rdy <= '0;
 		else
-			if((pipe_cnt == SHORT_PIPES) && little_mult)		// Сокращённое умножение
+			if(req && zf)										// Умножение на ноль
+				rdy <= ~rdy;
+			else if((pipe_cnt == SHORT_PIPES) && little_mult)	// Сокращённое умножение
 				rdy <= '1;
 			else begin
 				rdy <= (pipe_cnt == PIPE_SIZE - 1);				// Полное умножение
@@ -127,6 +131,10 @@ module smult_32_32 (
 	assign lr = {{28{a1_b1_lr[35]}}, a1_b1_lr};
 
 	always_ff @(posedge clk)
-		r <= little_mult ? lr : hr;
+		casex ({zf, little_mult})
+			2'b1? : r <= 64'h0;
+			2'b01 : r <= lr;
+			2'b00 : r <= hr;
+		endcase
 
 endmodule : smult_32_32
