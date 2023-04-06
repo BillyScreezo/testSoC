@@ -257,7 +257,7 @@ module miriscv_decode_stage
   // Control Unit
   logic [1:0] boot_addr_load;
 
-  always_ff @(posedge clk_i or negedge arstn_i) begin
+  always_ff @(posedge clk_i) begin
     if(~arstn_i) begin
       boot_addr_load <= '0;
     end else begin
@@ -278,7 +278,7 @@ module miriscv_decode_stage
 
   // RVFI INTERFACE
   if (RVFI) begin
-    always_ff @(posedge clk_i or negedge arstn_i) begin
+    always_ff @(posedge clk_i) begin
       if(~arstn_i) begin
         d_rvfi_wb_data_o        <= 'd0;
         d_rvfi_wb_we_o          <= 'd0;

@@ -90,7 +90,7 @@ module smult_32_32 (
 // ===================== Логика выдачи результата
 // ==============================================
 // Счётчик задержки умножителя
-	always_ff @(posedge clk or negedge rst_n)
+	always_ff @(posedge clk)
 		if(!rst_n)
 			pipe_cnt <= '0;
 		else
@@ -100,7 +100,7 @@ module smult_32_32 (
 				pipe_cnt <= pipe_cnt + 1'b1;
 
 // Логика сигнала готовности
-	always_ff @(posedge clk or negedge rst_n)
+	always_ff @(posedge clk)
 		if(!rst_n)
 			rdy <= '0;
 		else

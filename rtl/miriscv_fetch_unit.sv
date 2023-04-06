@@ -49,7 +49,7 @@ module miriscv_fetch_unit
   
   assign fetch_en = fetch_rvalid_o | cu_kill_f_i;
 
-  always_ff @(posedge clk_i or negedge arstn_i) begin
+  always_ff @(posedge clk_i) begin
     if ( ~arstn_i ) begin
       pc_reg <= '0; // Reset value here
     end
