@@ -65,9 +65,7 @@ module miriscv_decoder
   assign decode_mem_we_o        = (opcode == S_OPCODE_STORE) && !(ill_store || ill_last_bits);
   assign decode_load_o          = ((opcode == S_OPCODE_LOAD)) && !(ill_load || ill_last_bits);
 
-  assign ill_last_bits = (decode_instr_i[1:0] != 2'b11);
   assign decode_illegal_instr_o = ill_fence || ill_op || ill_opimm || ill_load || ill_store || ill_branch || ill_opcode || ill_last_bits;
-
   assign decode_fence_o         = (opcode == S_OPCODE_FENCE) && !(ill_fence || ill_last_bits);
 
   assign ill_fence      = (opcode == S_OPCODE_FENCE || opcode == S_OPCODE_JALR) && (funct3 != 3'b0);
@@ -79,9 +77,11 @@ module miriscv_decoder
   assign ill_load       = (opcode == S_OPCODE_LOAD) && (funct3 == 3 || funct3 > 5);
   assign ill_store      = (opcode == S_OPCODE_STORE) && (funct3 > 2);
   assign ill_branch     = (opcode == S_OPCODE_BRANCH) && (funct3 == 3'b010 || funct3 == 3'b011);
+  assign ill_last_bits  = (decode_instr_i[1:0] != 2'b11);
 
   always_comb
     (* parallel_case *) case(opcode)
+      S_OPCODE_SYSTEM: ill_opcode = 1'b0;
       S_OPCODE_FENCE : ill_opcode = 1'b0;
       S_OPCODE_OP    : ill_opcode = 1'b0;
       S_OPCODE_OPIMM : ill_opcode = 1'b0;
@@ -95,8 +95,8 @@ module miriscv_decoder
       default: ill_opcode = 1'b1;
     endcase
 
-  assign decode_ex_op1_sel_o = (opcode == S_OPCODE_AUIPC) ? 1'b1 : 1'b0;
-  assign decode_ex_op2_sel_o = ((opcode == S_OPCODE_OPIMM) || (opcode == S_OPCODE_AUIPC)) ? 1'b1 : 1'b0;
+  assign decode_ex_op1_sel_o = (opcode == S_OPCODE_AUIPC);
+  assign decode_ex_op2_sel_o = ((opcode == S_OPCODE_OPIMM) || (opcode == S_OPCODE_AUIPC));
 
   always_comb
     (* parallel_case *) case(opcode)
@@ -106,9 +106,9 @@ module miriscv_decoder
       default:                      decode_wb_src_sel_o = (decode_ex_mdu_req_o) ? MDU_DATA : ALU_DATA;
     endcase
 
-  assign decode_jal_o     = (opcode == S_OPCODE_JAL) ? 1 : 0;
-  assign decode_jalr_o    = (opcode == S_OPCODE_JALR) ? 1 : 0;
-  assign decode_branch_o  = (opcode == S_OPCODE_BRANCH) ? 1 : 0;
+  assign decode_jal_o     = (opcode == S_OPCODE_JAL);
+  assign decode_jalr_o    = (opcode == S_OPCODE_JALR);
+  assign decode_branch_o  = (opcode == S_OPCODE_BRANCH);
 
 // Alu
   logic [3:0] alu_op;
