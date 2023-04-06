@@ -105,9 +105,6 @@ module miriscv_decode_stage
   logic        mdu_stall_req;
   logic        lsu_stall_req;
 
-  logic        cu_kill_d;
-  logic        cu_stall_d;
-
   logic [XLEN-1:0] ex_result;
   logic            branch_des;
 

@@ -36,16 +36,11 @@ module miriscv_fetch_unit
 );
 
   localparam BYTE_ADDR_W = $clog2(XLEN/8);
-  
-    
-  logic [15:0]     instr_rdata_s;
-  logic            misaligned_access;
 
   logic [XLEN-1:0] pc_reg;
   logic [XLEN-1:0] pc_next;
   logic [XLEN-1:0] pc_plus_inc;
   logic            fetch_en;
-  logic            compr_instr;
   
   assign fetch_en = fetch_rvalid_o | cu_kill_f_i;
 
@@ -67,7 +62,7 @@ module miriscv_fetch_unit
   
 
 
-  assign instr_req_o  = ~(cu_boot_addr_load_en_i | cu_stall_f_i | instr_rvalid_i | cu_kill_f_i);//~cu_boot_addr_load_en_i & ~cu_stall_f_i & ~instr_rvalid_i & ~cu_kill_f_i;
+  assign instr_req_o  = ~(cu_boot_addr_load_en_i | instr_rvalid_i | cu_stall_f_i | cu_kill_f_i);//~cu_boot_addr_load_en_i & ~cu_stall_f_i & ~instr_rvalid_i & ~cu_kill_f_i;
   assign instr_addr_o = pc_reg;
 
 
