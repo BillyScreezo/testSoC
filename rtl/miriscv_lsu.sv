@@ -42,12 +42,12 @@ module miriscv_lsu
   
   logic [XLEN/4-1:0] data_be;
 
-  assign data_req_o  = lsu_req_i & ~lsu_kill_i & ~data_rvalid_i;
+  assign data_req_o  = lsu_req_i & ~data_rvalid_i;
   assign data_addr_o = lsu_addr_i;
   assign data_we_o   = lsu_we_i;
   assign data_be_o   = data_be;
   
-  assign lsu_stall_o = data_req_o;
+  assign lsu_stall_o = lsu_req_i & ~lsu_we_i & ~data_rvalid_i;
   
   ///////////
   // Store //
@@ -56,8 +56,14 @@ module miriscv_lsu
   always_comb
     (* full_case, parallel_case *) case ( lsu_size_i[1:0] )
       2'h2:  data_be = 'b1111;
-      2'h1:  data_be = ( 'b0011 << lsu_addr_i[1:0] );
-      2'h0:  data_be = ( 'b0001 << lsu_addr_i[1:0] );
+      2'h1:  data_be = (lsu_addr_i[1:0] == 2'b00) ? 'b0011 : 'b1100;
+      2'h0:  
+              (* full_case, parallel_case *) case (lsu_addr_i[1:0])
+                2'b00: data_be = 'b0001;
+                2'b01: data_be = 'b0010;
+                2'b10: data_be = 'b0100;
+                2'b11: data_be = 'b1000;
+              endcase
     endcase
 
   always_comb

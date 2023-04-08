@@ -132,7 +132,6 @@ module miriscv_mdu
     .div_stall_req_o ( div_stall    )
   );
 
-
   assign mdu_stall_req_o = div_stall || mult_stall;
 
   always_comb begin
