@@ -56,18 +56,18 @@ module miriscv_decoder
   assign funct3 = decode_instr_i[14:12];
   assign funct7 = decode_instr_i[31:25];
 
-  assign decode_rs1_re_o        = (decode_ex_op1_sel_o == 1'b0) && !decode_illegal_instr_o;
-  assign decode_rs2_re_o        = (decode_ex_op2_sel_o == 1'b0) && !decode_illegal_instr_o;
-  assign decode_ex_mdu_req_o    = (opcode == S_OPCODE_OP) && (funct7 == 1'b1) && !(ill_last_bits || ill_op_mul);
-  assign decode_wb_we_o         = !((opcode == S_OPCODE_FENCE) || decode_illegal_instr_o || (opcode[3:0] == 4'b1000)); // STORE or BRANCH
+  assign decode_rs1_re_o        = (decode_ex_op1_sel_o == 1'b0);
+  assign decode_rs2_re_o        = (decode_ex_op2_sel_o == 1'b0);
+  assign decode_ex_mdu_req_o    = (opcode == S_OPCODE_OP) && (funct7 == 1'b1);
+  assign decode_wb_we_o         = !((opcode == S_OPCODE_FENCE) || (opcode[3:0] == 4'b1000)); // STORE or BRANCH
+  assign decode_fence_o         = (opcode == S_OPCODE_FENCE);
 
-  assign decode_mem_req_o       = ((opcode == S_OPCODE_LOAD) || (opcode == S_OPCODE_STORE)) && !(ill_load|| ill_store || ill_last_bits);
-  assign decode_mem_we_o        = (opcode == S_OPCODE_STORE) && !(ill_store || ill_last_bits);
-  assign decode_load_o          = ((opcode == S_OPCODE_LOAD)) && !(ill_load || ill_last_bits);
+  assign decode_mem_req_o       = (opcode == S_OPCODE_LOAD) || (opcode == S_OPCODE_STORE);
+  assign decode_mem_we_o        = (opcode == S_OPCODE_STORE);
+  assign decode_load_o          = (opcode == S_OPCODE_LOAD);
 
   assign decode_illegal_instr_o = ill_fence || ill_op || ill_opimm || ill_load || ill_store || ill_branch || ill_opcode || ill_last_bits;
-  assign decode_fence_o         = (opcode == S_OPCODE_FENCE) && !(ill_fence || ill_last_bits);
-
+  
   assign ill_fence      = (opcode == S_OPCODE_FENCE || opcode == S_OPCODE_JALR) && (funct3 != 3'b0);
   assign ill_op_others  = (funct7 != 7'd0 && funct7 != 7'b010_0000 && funct7 != 3'd1);
   assign ill_op_s       = (funct7 == 7'b010_0000 && funct3 != 3'b000 && funct3 != 3'b101);
@@ -96,7 +96,7 @@ module miriscv_decoder
     endcase
 
   assign decode_ex_op1_sel_o = (opcode == S_OPCODE_AUIPC);
-  assign decode_ex_op2_sel_o = ((opcode == S_OPCODE_OPIMM) || (opcode == S_OPCODE_AUIPC));
+  assign decode_ex_op2_sel_o = (opcode == S_OPCODE_OPIMM) || (opcode == S_OPCODE_AUIPC);
 
   always_comb
     (* parallel_case *) case(opcode)
