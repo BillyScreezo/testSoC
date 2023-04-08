@@ -7,14 +7,28 @@
     // logic [31:0] f_rs2;
     // logic [31:0] f_rd;
     // logic [31:0] f_imm;
-    logic [31:0] d_rs1;
-    logic [31:0] d_rs2;
-    logic [31:0] d_rd;
     logic [31:0] d_imm;
     logic        d_alu_flag;
     logic [31:0] d_ram_cell_ls_op;
     logic [31:0] d_branch_addr;
+    logic        d_gpr_we;
 
+    logic [4:0]  d_addr_rs1;
+    logic [4:0]  d_addr_rs2;
+    logic [4:0]  d_addr_rd;
+    logic [31:0] d_rs1;
+    logic [31:0] d_rs2;
+    logic [31:0] d_rd;
+
+    logic [31:0] f_current_PC;
+    logic [31:0] d_current_PC;
+    logic [31:0] f_next_PC;
+    logic [31:0] d_next_PC;
+
+    assign d_current_PC     = DUT.core.decode.f_current_pc_i;
+    assign d_next_PC        = DUT.core.decode.f_next_pc_i
+    assign f_current_PC     = DUT.core.fetch.fetch_unit.pc_reg
+    assign f_next_PC        = DUT.core.fetch.fetch_unit.pc_next
     assign f_instr          = DUT.core.fetch.fetch_unit.instr_rdata_i;
     assign d_instr          = DUT.core.decode.decoder.decode_instr_i;
     assign d_rs1            = DUT.core.decode.gpr.r1_data_o;
@@ -24,6 +38,10 @@
     assign d_alu_flag       = DUT.core.decode.alu.alu_branch_des_o;
     assign d_ram_cell_ls_op = DUT.ram.dmem[DUT.core.decode.lsu.data_addr_o];
     assign d_branch_addr    = DUT.core.decode.cu_pc_bra_o;
+    assign d_gpr_we         = DUT.core.decode.gpr.wr_en_i;
+    assign d_addr_rs1       = DUT.core.decode.gpr.r1_addr_i;
+    assign d_addr_rs2       = DUT.core.decode.gpr.r2_addr_i;
+    assign d_addr_rd        = DUT.core.decode.gpr.wr_addr_i;
 
     logic [6:0] f_func7;
     logic [6:0] d_func7;
