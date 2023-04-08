@@ -15,14 +15,14 @@ module  miriscv_alu
   input         [XLEN-1:0]          alu_port_a_i, alu_port_b_i,   // ALU operation operand
   input   logic [XLEN-1:0]          cmp_a_i, cmp_b_i,
 
-  input         [3:0]  alu_op_i,        // ALU opcode
+  input   logic [3:0]               alu_op_i,        // ALU opcode
 
   output  logic [XLEN-1:0]          alu_result_o,    // ALU result
-  output  logic                     alu_branch_des_o // Comparison result for branch decision
+  output  logic                     alu_branch_des_o, // Comparison result for branch decision
+
+  output  logic [XLEN-1:0]          alu_add
 
 );
-
-  logic [XLEN-1:0] alu_add;
 
   always_comb begin
         alu_add = $signed(alu_port_a_i) + $signed(alu_op_i[3] ? ~alu_port_b_i : alu_port_b_i) + alu_op_i[3];
