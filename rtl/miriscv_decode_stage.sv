@@ -186,9 +186,9 @@ module miriscv_decode_stage
   assign op2 = decode_ex_op2_sel ? imm            : r2_data;
 
   assign decode_mem_data = r2_data;
-  assign decode_mem_addr = r1_data + imm;
+  assign decode_mem_addr = alu_add;
 
-  logic [XLEN-1:0] alu_result;
+  logic [XLEN-1:0] alu_result, alu_add;
   logic [XLEN-1:0] mdu_result;
   logic [XLEN-1:0] lsu_result;
 
@@ -208,7 +208,9 @@ module miriscv_decode_stage
     .cmp_b_i           (r2_data              ),
     .alu_op_i          (decode_alu_operation ),
     .alu_result_o      (alu_result           ),
-    .alu_branch_des_o  (branch_des           )
+    .alu_branch_des_o  (branch_des           ),
+
+    .alu_add           (alu_add)
   );
 
   miriscv_mdu mdu (
@@ -271,7 +273,7 @@ module miriscv_decode_stage
   assign cu_stall_d_o = cu_stall_f_o;
 
   // precompute PC values in case of jump
-  assign cu_pc_bra_o = d_jalr ? op1 + imm : f_current_pc_i  + imm;
+  assign cu_pc_bra_o = alu_add;
 
   // RVFI INTERFACE
   if (RVFI) begin

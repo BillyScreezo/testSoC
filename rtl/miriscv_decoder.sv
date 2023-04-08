@@ -95,8 +95,8 @@ module miriscv_decoder
       default: ill_opcode = 1'b1;
     endcase
 
-  assign decode_ex_op1_sel_o = (opcode == S_OPCODE_AUIPC);
-  assign decode_ex_op2_sel_o = (opcode == S_OPCODE_OPIMM) || (opcode == S_OPCODE_AUIPC);
+  assign decode_ex_op1_sel_o = (opcode == S_OPCODE_AUIPC) || (opcode == S_OPCODE_JAL) || (opcode == S_OPCODE_BRANCH);
+  assign decode_ex_op2_sel_o = (opcode == S_OPCODE_OPIMM) || (opcode == S_OPCODE_AUIPC) || (opcode == S_OPCODE_JAL) || (opcode == S_OPCODE_JALR) || (opcode == S_OPCODE_BRANCH) || (opcode == S_OPCODE_STORE) || (opcode == S_OPCODE_LOAD);
 
   always_comb
     (* parallel_case *) case(opcode)
@@ -112,13 +112,14 @@ module miriscv_decoder
 
 // Alu
   logic [3:0] alu_op;
-  assign alu_op[2:0] = opcode[0] ? ALU_ADD_SUB : funct3;  // Арифметические отличаются по нулевому биту опкода
+  assign alu_op[2:0] = funct3;
+
+  // assign alu_op[3] = (opcode == S_OPCODE_OPIMM) && (funct3 != 3'h5) ? 1'b0 : funct7[5];
 
   always_comb
-    (* parallel_case *) case (opcode)
+    (* full_case, parallel_case *) case (opcode)
       S_OPCODE_OP:      alu_op[3] = funct7[5];
       S_OPCODE_OPIMM:   alu_op[3] = (funct3 == 3'h5) ? funct7[5] : 1'b0;
-      default:          alu_op[3] = '0;
     endcase
 
 // Exit assigns
