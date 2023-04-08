@@ -185,7 +185,7 @@ module miriscv_decode_stage
   assign op1 = decode_ex_op1_sel ? f_current_pc_i : r1_data;
   assign op2 = decode_ex_op2_sel ? imm            : r2_data;
 
-  assign decode_mem_data = op2;
+  assign decode_mem_data = r2_data;
   assign decode_mem_addr = r1_data + imm;
 
   logic [XLEN-1:0] alu_result;

@@ -78,14 +78,6 @@ module miriscv_fetch_stage
       f_next_pc_o               <= '0;
       f_valid_o                 <= '0;
     end
-
-    else if (cu_kill_f_i) begin
-      f_instr_o                 <= { {(ILEN-8){1'b0}}, 8'h13 };
-      f_current_pc_o            <= '0;
-      f_next_pc_o               <= '0;
-      f_valid_o                 <= '0;
-    end
-
     else if (~cu_stall_f_i) begin
       f_instr_o                 <= fetch_instr_valid ? fetch_instr : { {(ILEN-8){1'b0}}, 8'h13 }; // put NOP if not valid
       f_current_pc_o            <= f_current_pc;
