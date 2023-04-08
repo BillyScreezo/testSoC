@@ -82,6 +82,7 @@ module tb_miriscv_test_soc;
         .uart_tx_o   ( uart_tx_o   )
     );
 
+    `include "tb_mirscv_comdecode.sv";
 
     //---------------------------------------------------------
     // Task: get_uart_transaction
