@@ -83,15 +83,10 @@ module miriscv_decode_stage
   logic [2:0]  decode_mdu_operation;
 
   logic        decode_ex_mdu_req;
-  logic        decode_ex_result_sel;
 
   logic        decode_mem_we;
   logic [2:0]  decode_mem_size;
   logic        decode_mem_req;
-
-  logic [1:0]  decode_csr_op;
-  logic        decode_csr_src_sel;
-  logic        decode_csr_req;
 
   logic [2:0]  decode_wb_src_sel;
   logic        decode_wb_we;
@@ -102,9 +97,6 @@ module miriscv_decode_stage
 
   logic        d_illegal_instr;
 
-  logic        d_ebreak;
-  logic        d_ecall;
-  logic        d_mret;
   logic        d_fence;
   logic        d_branch;
   logic        d_jal;
@@ -112,9 +104,6 @@ module miriscv_decode_stage
 
   logic        mdu_stall_req;
   logic        lsu_stall_req;
-
-  logic        cu_kill_d;
-  logic        cu_stall_d;
 
   logic [XLEN-1:0] ex_result;
   logic            branch_des;
@@ -151,13 +140,9 @@ module miriscv_decode_stage
     .decode_illegal_instr_o (d_illegal_instr      )
   );
 
-
   // Register File
-  logic [GPR_ADDR_WIDTH-1:0]  r1_addr;
-  logic [XLEN-1:0]            r1_data;
-  logic [GPR_ADDR_WIDTH-1:0]  r2_addr;
-  logic [XLEN-1:0]            r2_data;
-  logic [GPR_ADDR_WIDTH-1:0]  rd_addr;
+  logic [GPR_ADDR_WIDTH-1:0]  r1_addr, r2_addr, rd_addr;
+  logic [XLEN-1:0]            r1_data, r2_data;
 
   logic                       gpr_wr_en;
   logic [GPR_ADDR_WIDTH-1:0]  gpr_wr_addr;
@@ -173,7 +158,6 @@ module miriscv_decode_stage
 
   miriscv_gpr  gpr (
     .clk_i      (clk_i        ),
-    .arstn_i    (arstn_i      ),
 
     .wr_en_i    (gpr_wr_en    ),
     .wr_addr_i  (gpr_wr_addr  ),
@@ -243,7 +227,6 @@ module miriscv_decode_stage
   miriscv_lsu lsu (
     // clock, reset
     .clk_i                   (clk_i                      ),
-    .arstn_i                 (arstn_i                    ),
 
     // data memory interface
     .data_rvalid_i           (data_rvalid_i              ),
@@ -266,15 +249,14 @@ module miriscv_decode_stage
 
     // control and status signals
     .lsu_stall_o             (lsu_stall_req              )
-
   );
 
   // Control Unit
   logic [1:0] boot_addr_load;
 
-  always_ff @(posedge clk_i or negedge arstn_i) begin
+  always_ff @(posedge clk_i) begin
     if(~arstn_i) begin
-      boot_addr_load <= 2'b00;
+      boot_addr_load <= '0;
     end else begin
       boot_addr_load <= {boot_addr_load[0], 1'b1};
     end
@@ -291,10 +273,9 @@ module miriscv_decode_stage
   // precompute PC values in case of jump
   assign cu_pc_bra_o = d_jalr ? op1 + imm : f_current_pc_i  + imm;
 
-
   // RVFI INTERFACE
   if (RVFI) begin
-    always_ff @(posedge clk_i or negedge arstn_i) begin
+    always_ff @(posedge clk_i) begin
       if(~arstn_i) begin
         d_rvfi_wb_data_o        <= 'd0;
         d_rvfi_wb_we_o          <= 'd0;
