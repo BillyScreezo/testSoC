@@ -229,6 +229,7 @@ module miriscv_decode_stage
   miriscv_lsu lsu (
     // clock, reset
     .clk_i                   (clk_i                      ),
+    .rst_n                   (arstn_i                    ),
 
     // data memory interface
     .data_rvalid_i           (data_rvalid_i              ),
