@@ -76,36 +76,27 @@ module miriscv_decode_stage
   logic        decode_rs1_re;
   logic        decode_rs2_re;
 
-  logic [1:0]  decode_ex_op1_sel;
-  logic [1:0]  decode_ex_op2_sel;
+  logic        decode_ex_op1_sel;
+  logic        decode_ex_op2_sel;
 
-  logic [4:0]  decode_alu_operation;
+  logic [3:0]  decode_alu_operation;
   logic [2:0]  decode_mdu_operation;
 
   logic        decode_ex_mdu_req;
-  logic        decode_ex_result_sel;
 
   logic        decode_mem_we;
   logic [2:0]  decode_mem_size;
   logic        decode_mem_req;
 
-  logic [1:0]  decode_csr_op;
-  logic        decode_csr_src_sel;
-  logic        decode_csr_req;
-
-  logic [1:0]  decode_wb_src_sel;
+  logic [2:0]  decode_wb_src_sel;
   logic        decode_wb_we;
 
-  logic [XLEN-1:0] decode_mem_addr_imm;
   logic [XLEN-1:0] decode_mem_addr;
   logic [XLEN-1:0] decode_mem_data;
   logic            decode_load;
 
   logic        d_illegal_instr;
 
-  logic        d_ebreak;
-  logic        d_ecall;
-  logic        d_mret;
   logic        d_fence;
   logic        d_branch;
   logic        d_jal;
@@ -113,9 +104,6 @@ module miriscv_decode_stage
 
   logic        mdu_stall_req;
   logic        lsu_stall_req;
-
-  logic        cu_kill_d;
-  logic        cu_stall_d;
 
   logic [XLEN-1:0] ex_result;
   logic            branch_des;
@@ -152,23 +140,14 @@ module miriscv_decode_stage
     .decode_illegal_instr_o (d_illegal_instr      )
   );
 
-
   // Register File
-
-
-  logic [GPR_ADDR_WIDTH-1:0]  r1_addr;
-  logic [XLEN-1:0]            r1_data;
-  logic [GPR_ADDR_WIDTH-1:0]  r2_addr;
-  logic [XLEN-1:0]            r2_data;
-  logic [GPR_ADDR_WIDTH-1:0]  rd_addr;
+  logic [GPR_ADDR_WIDTH-1:0]  r1_addr, r2_addr, rd_addr;
+  logic [XLEN-1:0]            r1_data, r2_data;
 
   logic                       gpr_wr_en;
   logic [GPR_ADDR_WIDTH-1:0]  gpr_wr_addr;
   logic [XLEN-1:0]            gpr_wr_data;
 
-
-
-  
   assign gpr_wr_en   = decode_wb_we & ~cu_stall_d_o;
   assign gpr_wr_addr = rd_addr;
   assign gpr_wr_data = ex_result;
@@ -177,12 +156,8 @@ module miriscv_decode_stage
   assign r2_addr = f_instr_i[24:20];
   assign rd_addr = f_instr_i[11:7];  
 
-  
-
-
   miriscv_gpr  gpr (
     .clk_i      (clk_i        ),
-    .arstn_i    (arstn_i      ),
 
     .wr_en_i    (gpr_wr_en    ),
     .wr_addr_i  (gpr_wr_addr  ),
@@ -196,102 +171,54 @@ module miriscv_decode_stage
   );
 
   // Immediate and signextend
+  logic [XLEN-1:0] imm;
 
-  logic [XLEN-1:0] imm_i;
-  logic [XLEN-1:0] imm_u;
-  logic [XLEN-1:0] imm_s;
-  logic [XLEN-1:0] imm_b;
-  logic [XLEN-1:0] imm_j;
-
-  miriscv_signextend #(
-    .IN_WIDTH  (12  ),
-    .OUT_WIDTH (XLEN)
-  ) extend_imm_i (
-    .data_i (f_instr_i[31:20] ),
-    .data_o (imm_i)
+  miriscv_imm imm_inst (
+    .instr_i(f_instr_i),
+    .imm_o(imm)
   );
-
-  assign imm_u = {f_instr_i[31:12], 12'd0};
-
-  miriscv_signextend #(
-    .IN_WIDTH  (12  ),
-    .OUT_WIDTH (XLEN)
-  ) extend_imm_s (
-    .data_i ({f_instr_i[31:25], f_instr_i[11:7]}),
-    .data_o (imm_s)
-  );
-
-  miriscv_signextend #(
-    .IN_WIDTH  (13  ),
-    .OUT_WIDTH (XLEN)
-  ) extend_imm_b (
-    .data_i ({f_instr_i[31], f_instr_i[7], f_instr_i[30:25], f_instr_i[11:8], 1'b0}),
-    .data_o (imm_b)
-  );
-
-  miriscv_signextend #(
-    .IN_WIDTH  (21),
-    .OUT_WIDTH (XLEN)
-  ) extend_imm_j (
-    .data_i ({f_instr_i[31], f_instr_i[19:12], f_instr_i[20], f_instr_i[30:21], 1'b0}),
-    .data_o (imm_j)
-  );
-
 
   // Datapath
   logic [XLEN-1:0] op1;
   logic [XLEN-1:0] op2;
 
-  always_comb begin
-    unique case (decode_ex_op1_sel)
-      RS1_DATA:   op1 = r1_data;
-      CURRENT_PC: op1 = f_current_pc_i;
-      ZERO:       op1 = {XLEN{1'b0}};
-    endcase
-  end
+  assign op1 = decode_ex_op1_sel ? f_current_pc_i : r1_data;
+  assign op2 = decode_ex_op2_sel ? imm            : r2_data;
 
-  always_comb begin
-    unique case (decode_ex_op2_sel)
-      RS2_DATA: op2 = r2_data;
-      IMM_I:    op2 = imm_i;
-      IMM_U:    op2 = imm_u;
-      NEXT_PC:  op2 = f_next_pc_i;
-    endcase
-  end
+  assign decode_mem_data = r2_data;
+  assign decode_mem_addr = alu_add;
 
-  assign decode_mem_data     = op2;
-  assign decode_mem_addr_imm = decode_load ? imm_i : imm_s;
-  assign decode_mem_addr     = op1 + decode_mem_addr_imm;
-
-
-  
-
-  logic [XLEN-1:0] alu_result;
+  logic [XLEN-1:0] alu_result, alu_add;
   logic [XLEN-1:0] mdu_result;
   logic [XLEN-1:0] lsu_result;
 
-  always_comb begin
-    unique case (decode_wb_src_sel)
-      ALU_DATA : ex_result = alu_result; // This needs a readable parameter
+  always_comb
+    (* full_case, parallel_case *) case (decode_wb_src_sel)
+      ALU_DATA : ex_result = alu_result;
       MDU_DATA : ex_result = mdu_result;
       LSU_DATA : ex_result = lsu_result;
+      PC_DATA  : ex_result = f_next_pc_i;
+      IMM_DATA : ex_result = imm;
     endcase
-  end
 
   miriscv_alu alu (
     .alu_port_a_i      (op1                  ),
     .alu_port_b_i      (op2                  ),
+    .cmp_a_i           (r1_data              ),
+    .cmp_b_i           (r2_data              ),
     .alu_op_i          (decode_alu_operation ),
     .alu_result_o      (alu_result           ),
-    .alu_branch_des_o  (branch_des           )
+    .alu_branch_des_o  (branch_des           ),
+
+    .alu_add           (alu_add)
   );
 
   miriscv_mdu mdu (
     .clk_i           (clk_i                            ),
     .arstn_i         (arstn_i                          ),
     .mdu_req_i       (decode_ex_mdu_req                ),
-    .mdu_port_a_i    (op1                              ),
-    .mdu_port_b_i    (op2                              ),
+    .mdu_port_a_i    (r1_data                          ),
+    .mdu_port_b_i    (r2_data                          ),
     .mdu_op_i        (decode_mdu_operation             ),
     .mdu_kill_i      (1'b0                             ),
     .mdu_keep_i      (1'b0                             ),
@@ -299,12 +226,10 @@ module miriscv_decode_stage
     .mdu_stall_req_o (mdu_stall_req                    )
   );
 
-
-
   miriscv_lsu lsu (
     // clock, reset
     .clk_i                   (clk_i                      ),
-    .arstn_i                 (arstn_i                    ),
+    .rst_n                   (arstn_i                    ),
 
     // data memory interface
     .data_rvalid_i           (data_rvalid_i              ),
@@ -327,82 +252,33 @@ module miriscv_decode_stage
 
     // control and status signals
     .lsu_stall_o             (lsu_stall_req              )
-
   );
 
   // Control Unit
-
-  //
-  //     Program counter control
-  //
-
   logic [1:0] boot_addr_load;
 
-  always_ff @(posedge clk_i or negedge arstn_i) begin
+  always_ff @(posedge clk_i) begin
     if(~arstn_i) begin
-      boot_addr_load <= 2'b00;
-    end
-    else begin
+      boot_addr_load <= '0;
+    end else begin
       boot_addr_load <= {boot_addr_load[0], 1'b1};
     end
   end
 
   assign cu_boot_addr_load_en_o = ~boot_addr_load[1];
 
-
-  assign cu_stall_f_o = cu_boot_addr_load_en_o | lsu_stall_req | mdu_stall_req;
-  assign cu_kill_f_o  = branch_des | d_jal | d_jalr;
+  assign cu_stall_f_o = cu_boot_addr_load_en_o  | lsu_stall_req | mdu_stall_req;
+  assign cu_kill_f_o  = (branch_des & d_branch) | d_jal | d_jalr;
 
   assign cu_kill_d_o  = 'b0;
   assign cu_stall_d_o = cu_stall_f_o;
 
   // precompute PC values in case of jump
-  logic [XLEN-1:0] jalr_pc;
-  logic [XLEN-1:0] branch_pc;
-  logic [XLEN-1:0] jal_pc;
+  assign cu_pc_bra_o = alu_add;
 
-  assign jalr_pc   = ( op1 + imm_i ) & ( ~'b1 );
-  assign branch_pc = f_current_pc_i  + imm_b;
-  assign jal_pc    = f_current_pc_i  + imm_j;
-
-  enum logic [3:0] {
-    PC_INCR,
-    PC_JAL,
-    PC_JALR,
-    PC_BRANCH,
-    PC_MRET,
-    PC_ECALL,
-    PC_FENCE,
-    PC_WFI,
-    PC_IRQ,
-    PC_EXCEPT
-  } next_pc_sel;
-
-
-  // IRQ > Exc > Branch = JALR = MRET > JAL = WFI
-  always_comb begin
-    case ({branch_des, d_jalr, d_jal}) inside
-      3'b1??:  next_pc_sel = PC_BRANCH;
-      3'b01?:  next_pc_sel = PC_JALR;
-      3'b001:  next_pc_sel = PC_JAL;
-      default: next_pc_sel = PC_INCR;
-    endcase
-  end
-
-
-  always_comb begin
-    case (next_pc_sel)
-      PC_JAL:    cu_pc_bra_o = jal_pc;
-      PC_JALR:   cu_pc_bra_o = jalr_pc;
-      PC_BRANCH: cu_pc_bra_o = branch_pc;
-      default:   cu_pc_bra_o = branch_pc; // any value can be placed here
-    endcase
-  end
-
-  
   // RVFI INTERFACE
   if (RVFI) begin
-    always_ff @(posedge clk_i or negedge arstn_i) begin
+    always_ff @(posedge clk_i) begin
       if(~arstn_i) begin
         d_rvfi_wb_data_o        <= 'd0;
         d_rvfi_wb_we_o          <= 'd0;

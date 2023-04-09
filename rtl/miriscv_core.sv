@@ -85,19 +85,9 @@ module  miriscv_core
   logic [2:0]                 mem_size  [d:d];
   logic                       mem_req   [d:d];
 
-  //logic [1:0]                 csr_op      [d:e];
-  //logic [11:0]                csr_addr    [d:e];
-  //logic [XLEN-1:0]            csr_imm     [d:d];
-  //logic                       csr_src_sel [d:d];
-  //logic [XLEN-1:0]            csr_data    [e:e];
-  //logic                       csr_req     [d:e];
-  //logic                       csr_rs1_null[d:e];
-
   logic                       cu_stall  [f:d];
-  //logic                       cu_flush  [f:d];
   logic                       cu_kill   [f:d];
   logic                       cu_keep   [d:d];
-
 
   logic [XLEN-1:0]            rvfi_ex_result [d:w];
   logic [XLEN-1:0]            rvfi_lsu_data  [d:w];
@@ -132,7 +122,6 @@ module  miriscv_core
 
 
   // Fetch stage
-
   logic [XLEN-1:0]  cu_pc_bra;
   logic             cu_boot_addr_load_en;
 

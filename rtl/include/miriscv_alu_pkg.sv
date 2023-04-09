@@ -10,29 +10,23 @@
 
 package  miriscv_alu_pkg;
 
-  parameter ALU_OP_WIDTH = 5;
+  parameter ALU_OP_WIDTH = 4;
 
-  parameter ALU_ADD  = 5'b00000;    // addition
-  parameter ALU_SUB  = 5'b00001;    // substraction
+  parameter ALU_EQ   = 3'h0;    //           rs1 == rs2 (branch)
+  parameter ALU_NE   = 3'h1;    //           rs1 != rs2 (branch)
+  parameter ALU_LT   = 3'h4;    // signed,   rs1 <  rs2 (branch)
+  parameter ALU_GE   = 3'h5;    // signed,   rs1 >= rs2 (branch)
+  parameter ALU_LTU  = 3'h6;    // unsigned, rs1 <  rs2 (branch)
+  parameter ALU_GEU  = 3'h7;    // unsigned, rs1 >= rs2 (branch)
 
-  parameter ALU_EQ   = 5'b00010;    //           rs1 == rs2 (branch)
-  parameter ALU_NE   = 5'b00011;    //           rs1 != rs2 (branch)
-  parameter ALU_LT   = 5'b00100;    // signed,   rs1 <  rs2 (branch)
-  parameter ALU_LTU  = 5'b00101;    // unsigned, rs1 <  rs2 (branch)
-  parameter ALU_GE   = 5'b00110;    // signed,   rs1 >= rs2 (branch)
-  parameter ALU_GEU  = 5'b00111;    // unsigned, rs1 >= rs2 (branch)
 
-  parameter ALU_SLT  = 5'b01000;    // signed,   rs1 <  rs2 (reg-reg)
-  parameter ALU_SLTU = 5'b01001;    // unsigned, rs1 <  rs2 (reg-reg)
-
-  parameter ALU_SLL  = 5'b01010;    // logical left shift
-  parameter ALU_SRL  = 5'b01011;    // logical right shift
-  parameter ALU_SRA  = 5'b01100;    // arithmetic right shift
-
-  parameter ALU_XOR  = 5'b01101;    // bitwise XOR
-  parameter ALU_OR   = 5'b01110;    // bitwise OR
-  parameter ALU_AND  = 5'b01111;    // bitwise AND
-
-  parameter ALU_JAL  = 5'b10000;    // rs2 bypass for JAL and JALR
+  parameter ALU_ADD_SUB = 3'h0;    // addition
+  parameter ALU_SLL     = 3'h1;    // logical left shift
+  parameter ALU_SLT     = 3'h2;    // signed,   rs1 <  rs2 (reg-reg)
+  parameter ALU_SLTU    = 3'h3;    // unsigned, rs1 <  rs2 (reg-reg)
+  parameter ALU_XOR     = 3'h4;    // bitwise XOR
+  parameter ALU_SRL_SRA = 3'h5;    // logical right shift
+  parameter ALU_OR      = 3'h6;    // bitwise OR
+  parameter ALU_AND     = 3'h7;    // bitwise AND
 
 endpackage :  miriscv_alu_pkg

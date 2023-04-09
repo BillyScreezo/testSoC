@@ -12,134 +12,40 @@ module  miriscv_alu
   import  miriscv_pkg::XLEN;
   import  miriscv_alu_pkg::*;
 (
-  input         [XLEN-1:0]          alu_port_a_i,    // ALU operation first operand
-  input         [XLEN-1:0]          alu_port_b_i,    // ALU operation second operand
-  input         [ALU_OP_WIDTH-1:0]  alu_op_i,        // ALU opcode
-  output  logic [XLEN-1:0]          alu_result_o,    // ALU result
+  input         [XLEN-1:0]          alu_port_a_i, alu_port_b_i,   // ALU operation operand
+  input   logic [XLEN-1:0]          cmp_a_i, cmp_b_i,
 
-  output  logic                     alu_branch_des_o // Comparison result for branch decision
+  input   logic [3:0]               alu_op_i,        // ALU opcode
+
+  output  logic [XLEN-1:0]          alu_result_o,    // ALU result
+  output  logic                     alu_branch_des_o, // Comparison result for branch decision
+
+  output  logic [XLEN-1:0]          alu_add
+
 );
 
-  logic   [XLEN-1:0]  alu_sum;
-  logic               alu_cmp;
-  logic   [XLEN-1:0]  alu_shift;
-  logic   [XLEN-1:0]  alu_bit;
-
-
-  ///////////////////////////
-  // Addition-substraction //
-  ///////////////////////////
-
-  logic             carry_out;
-  logic             op_add;
-
-  assign op_add = ( alu_op_i == ALU_ADD );
-
-  assign { carry_out, alu_sum } = ( op_add ) ? ( alu_port_a_i + alu_port_b_i )
-                                             : ( alu_port_a_i - alu_port_b_i );
-
-
-  //////////////////////////////////
-  // Comparison + Branch decision //
-  //////////////////////////////////
-
-  logic   signs_eq;
-  logic   signed_op;
-
   always_comb begin
-    case ( alu_op_i )
-      ALU_LT,
-      ALU_GE,
-      ALU_SLT: signed_op = 1'b1;
+        alu_add = $signed(alu_port_a_i) + $signed(alu_op_i[3] ? ~alu_port_b_i : alu_port_b_i) + alu_op_i[3];
 
-      default: signed_op = 1'b0;
-    endcase
-  end
+        (* full_case, parallel_case *) case (alu_op_i[2:0])
+            ALU_ADD_SUB:    alu_result_o = alu_add;
+            ALU_SLL:        alu_result_o = alu_port_a_i << alu_port_b_i[$clog2(XLEN)-1:0];
+            ALU_SLT:        alu_result_o = ($signed(alu_port_a_i) < $signed(alu_port_b_i));
+            ALU_SLTU:       alu_result_o = (alu_port_a_i < alu_port_b_i);
+            ALU_XOR:        alu_result_o = alu_port_a_i ^ alu_port_b_i;
+            ALU_SRL_SRA:    alu_result_o = alu_op_i[3] ? (alu_port_a_i >>> alu_port_b_i[$clog2(XLEN)-1:0]) : alu_port_a_i >> alu_port_b_i[$clog2(XLEN)-1:0];
+            ALU_OR:         alu_result_o = alu_port_a_i | alu_port_b_i;
+            ALU_AND:        alu_result_o = alu_port_a_i & alu_port_b_i;
+        endcase
 
-  assign signs_eq = ( alu_port_a_i[XLEN-1] == alu_port_b_i[XLEN-1] );
-
-  logic  cmp_ne;
-  logic  cmp_lt;
-
-  assign cmp_ne = |alu_bit;
-  assign cmp_lt  = ( signs_eq ) ? ( carry_out ) : ( alu_port_a_i[XLEN-1] == signed_op );
-
-  always_comb begin
-    case ( alu_op_i )
-      ALU_EQ:  alu_branch_des_o = ~cmp_ne;
-
-      ALU_NE:  alu_branch_des_o = cmp_ne;
-
-      ALU_LT,
-      ALU_LTU: alu_branch_des_o = cmp_lt;
-
-      ALU_GE,
-      ALU_GEU: alu_branch_des_o = ~cmp_lt;
-
-      default: alu_branch_des_o = 1'b0;
-    endcase
-  end
-
-  // SLT and SLTU
-  assign alu_cmp = cmp_lt;
-
-
-  ///////////
-  // Shift //
-  ///////////
-
-  logic [$clog2(XLEN)-1:0]  shift;
-  assign shift = alu_port_b_i[$clog2(XLEN)-1:0];
-
-  logic signed [XLEN-1:0] sra_res;
-  assign sra_res = $signed(alu_port_a_i) >>> shift;
-
-  always_comb begin
-    case ( alu_op_i )
-      ALU_SLL: alu_shift = alu_port_a_i << shift;
-      ALU_SRL: alu_shift = alu_port_a_i >> shift;
-      default: alu_shift = sra_res; // ALU_SRA
-   endcase
-  end
-
-
-  ////////////////////////
-  // Bitwise operations //
-  ////////////////////////
-
-  always_comb begin
-    case ( alu_op_i )
-      ALU_OR:  alu_bit = alu_port_a_i | alu_port_b_i;
-
-      ALU_AND: alu_bit = alu_port_a_i & alu_port_b_i;
-
-      default: alu_bit = alu_port_a_i ^ alu_port_b_i; // ALU_EQ, ALU_NE, ALU_XOR
-    endcase
-  end
-
-
-  /////////
-  // MUX //
-  /////////
-
-  always_comb begin
-    case ( alu_op_i )
-      ALU_ADD,
-      ALU_SUB:  alu_result_o = alu_sum;
-
-      ALU_SLT,
-      ALU_SLTU: alu_result_o = {{(XLEN-1){1'b0}}, alu_cmp};
-
-      ALU_SLL,
-      ALU_SRL,
-      ALU_SRA:  alu_result_o = alu_shift;
-
-      ALU_XOR,
-      ALU_OR,
-      ALU_AND:  alu_result_o = alu_bit;
-
-      default: alu_result_o = alu_port_b_i; // ALU_JAL
-    endcase
-  end
+        (* full_case, parallel_case *) case (alu_op_i[2:0])
+            ALU_EQ:     alu_branch_des_o = (cmp_a_i == cmp_b_i);
+            ALU_NE:     alu_branch_des_o = (cmp_a_i != cmp_b_i);
+            ALU_LT:     alu_branch_des_o = ($signed(cmp_a_i)  < $signed(cmp_b_i));
+            ALU_GE:     alu_branch_des_o = ($signed(cmp_a_i) >= $signed(cmp_b_i));
+            ALU_LTU:    alu_branch_des_o = (cmp_a_i  < cmp_b_i);
+            ALU_GEU:    alu_branch_des_o = (cmp_a_i >= cmp_b_i);
+        endcase
+    end
 
 endmodule

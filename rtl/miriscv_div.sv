@@ -53,69 +53,21 @@ module miriscv_div
   // Next state decision //
   /////////////////////////
 
-  always_ff @( posedge clk_i ) begin
-    if( ~arstn_i ) begin
+  always_ff @( posedge clk_i )
+    if( ~arstn_i )
       d_state <= DIV_IDLE;
-    end
-    else begin
-      if ( kill_i )
-        d_state <= DIV_IDLE;
-      else
-        d_state <= d_next_state;
-    end
-  end
+    else 
+      d_state <= d_next_state;
 
-  always_comb begin
-    case ( d_state )
-
-      DIV_IDLE: begin
-        if ( div_start_i )
-          d_next_state = DIV_FIRST;
-        else
-          d_next_state = DIV_IDLE;
-      end
-
-      DIV_FIRST: begin
-        if ( zero_i )
-          d_next_state = DIV_FINISH;
-        else
-          d_next_state = DIV_COMP;
-      end
-
-      DIV_COMP: begin
-        if ( iter == 'd1 )
-          d_next_state = DIV_LAST;
-        else
-          d_next_state = DIV_COMP;
-      end
-
-      DIV_LAST: begin
-        if ( sign_inv ) begin
-          d_next_state = DIV_SIGN_CHANGE;
-        end
-        else begin
-          d_next_state = DIV_FINISH;
-        end
-      end
-
-      DIV_SIGN_CHANGE: begin
-        d_next_state = DIV_FINISH;
-      end
-
-      DIV_FINISH: begin
-        if ( ~keep_i )
-          d_next_state = DIV_IDLE;
-        else
-          d_next_state = DIV_FINISH;
-      end
-
-      default: begin
-        d_next_state = DIV_IDLE;
-      end
-
+  always_comb
+    (* full_case, parallel_case *) case ( d_state )
+      DIV_IDLE:         d_next_state = div_start_i ?    DIV_FIRST : DIV_IDLE;
+      DIV_FIRST:        d_next_state = zero_i ?         DIV_FINISH : DIV_COMP;
+      DIV_COMP:         d_next_state = (iter == 'd1) ?  DIV_LAST : DIV_COMP;
+      DIV_LAST:         d_next_state = sign_inv ?       DIV_SIGN_CHANGE : DIV_FINISH;
+      DIV_SIGN_CHANGE:  d_next_state =                  DIV_FINISH;
+      DIV_FINISH:       d_next_state = (~keep_i) ?      DIV_IDLE : DIV_FINISH;
     endcase
-  end
-
 
   ////////////////////////////
   // Division state machine //
@@ -189,35 +141,26 @@ module miriscv_div
       end
 
       always_ff @( posedge clk_i ) begin
-        if ( ~arstn_i ) begin
-          div_result    <= {XLEN{1'b0}};
-          rem_result    <= {(2*XLEN+1){1'b0}};
-          div_operand_a <= {(XLEN){1'b0}};
-          div_operand_b <= {(XLEN){1'b0}};
-          sign_inv      <= 1'b0;
-          iter          <= {($clog2(XLEN)){1'b0}};
-        end
-        else begin
+
           rem_result[2*XLEN:XLEN] <= dsp48_P[XLEN:0];
 
-          case ( d_state )
+          (* full_case, parallel_case *) case ( d_state )
 
             DIV_IDLE: begin
-              case ( mdu_op_i )
+              (* full_case, parallel_case *) case ( mdu_op_i )
                 MDU_DIV,
                 MDU_REM:  begin
-                  div_operand_a <= ( sign_a ) ? ( ~port_a_i + 'd1 ) : ( port_a_i );
-                  div_operand_b <= ( sign_b ) ? ( ~port_b_i + 'd1 ) : ( port_b_i );
+                  div_operand_a <= ( sign_a ) ? -port_a_i : port_a_i;
+                  div_operand_b <= ( sign_b ) ? -port_b_i : port_b_i;
                 end
                 MDU_DIVU,
                 MDU_REMU: begin
                   div_operand_a <= port_a_i;
                   div_operand_b <= port_b_i;
                 end
-                default: ;
               endcase
 
-              case ( mdu_op_i )
+              (* full_case, parallel_case *) case ( mdu_op_i )
                 MDU_DIV: sign_inv <= ( sign_a ^ sign_b );
                 MDU_REM: sign_inv <= sign_a;
                 default: sign_inv <= 1'b0;
@@ -226,14 +169,12 @@ module miriscv_div
 
             DIV_FIRST: begin
               iter <= XLEN - 1;
-              if ( zero_i ) begin
-                div_result <= '1;
+              div_result <= zero_i ? '1 : { {(XLEN-1){~sign_inv}}, 1'b1 };
+
+              if ( zero_i )
                 rem_result[2*XLEN-1:XLEN] <= port_a_i;
-              end
-              else begin
-                div_result <= { {(XLEN-1){~sign_inv}}, 1'b1 };
+              else
                 rem_result[XLEN-1:0] <= { div_operand_a[XLEN-2:0], 1'b0 };
-              end
             end
 
             DIV_COMP,
@@ -246,43 +187,30 @@ module miriscv_div
             DIV_SIGN_CHANGE: begin
               div_result <= ~div_result + 'd1;
             end
-
-            default: ;
           endcase
-        end
       end
-
     end
     else if ( DIV_IMPLEMENTATION == "GENERIC" ) begin
 
       always_ff @( posedge clk_i ) begin
-        if ( ~arstn_i ) begin
-          div_result    <= {XLEN{1'b0}};
-          rem_result    <= {(2*XLEN+1){1'b0}};
-          div_operand_a <= {(XLEN){1'b0}};
-          div_operand_b <= {(XLEN){1'b0}};
-          sign_inv      <= 1'b0;
-          iter          <= {($clog2(XLEN)){1'b0}};
-        end
-        else begin
-          case ( d_state )
+
+          (* full_case, parallel_case *) case ( d_state )
 
             DIV_IDLE: begin
-              case ( mdu_op_i )
+              (* full_case, parallel_case *) case ( mdu_op_i )
                 MDU_DIV,
                 MDU_REM:  begin
-                  div_operand_a <= ( sign_a ) ? ( ~port_a_i + 'd1 ) : ( port_a_i );
-                  div_operand_b <= ( sign_b ) ? ( ~port_b_i + 'd1 ) : ( port_b_i );
+                  div_operand_a <= ( sign_a ) ? -port_a_i : port_a_i;
+                  div_operand_b <= ( sign_b ) ? -port_b_i : port_b_i;
                 end
                 MDU_DIVU,
                 MDU_REMU: begin
                   div_operand_a <= port_a_i;
                   div_operand_b <= port_b_i;
                 end
-                default: ;
               endcase
 
-              case ( mdu_op_i )
+              (* full_case, parallel_case *) case ( mdu_op_i )
                 MDU_DIV: sign_inv <= ( sign_a ^ sign_b );
                 MDU_REM: sign_inv <= sign_a;
                 default: sign_inv <= 1'b0;
@@ -291,12 +219,11 @@ module miriscv_div
 
             DIV_FIRST: begin
               iter <= XLEN - 'd1;
-              if ( zero_i ) begin
-                div_result <= '1;
+              div_result <= zero_i ? '1 : { {(XLEN-1){~sign_inv}}, 1'b1 };
+
+              if ( zero_i )
                 rem_result[2*XLEN-1:XLEN] <= port_a_i;
-              end
               else begin
-                div_result <= { {(XLEN-1){~sign_inv}}, 1'b1 };
                 rem_result[2*XLEN:XLEN] <= div_operand_a[XLEN-1] - div_operand_b[XLEN-1:0];
                 rem_result[XLEN-1:0] <= { div_operand_a[XLEN-2:0], 1'b0 };
               end
@@ -306,12 +233,7 @@ module miriscv_div
               iter <= iter - 'd1;
               div_result[iter] <= !rem_result[2*XLEN];
               rem_result[XLEN-1:0] <= { rem_result[XLEN-2:0], 1'b0 };
-              if ( rem_result[2*XLEN] ) begin
-                rem_result[2*XLEN:XLEN] <= rem_result[2*XLEN-1:XLEN-1] + div_operand_b[XLEN-1:0];
-              end
-              else begin
-                rem_result[2*XLEN:XLEN] <= rem_result[2*XLEN-1:XLEN-1] - div_operand_b[XLEN-1:0];
-              end
+              rem_result[2*XLEN:XLEN] <= rem_result[2*XLEN] ? rem_result[2*XLEN-1:XLEN-1] + div_operand_b[XLEN-1:0] : rem_result[2*XLEN-1:XLEN-1] - div_operand_b[XLEN-1:0];
             end
 
             DIV_LAST: begin
@@ -325,10 +247,7 @@ module miriscv_div
               rem_result[2*XLEN:XLEN] <= ~rem_result[2*XLEN:XLEN] + 'd1;
               div_result <= ~div_result + 'd1;
             end
-
-            default: ;
           endcase
-        end
       end
 
     end
