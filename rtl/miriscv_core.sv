@@ -125,33 +125,31 @@ module  miriscv_core
   logic [XLEN-1:0]  cu_pc_bra;
   logic             cu_boot_addr_load_en;
 
-   miriscv_fetch_stage #(
-    .RVFI (RVFI)
-  ) fetch (
-    .clk_i                        (clk_i                      ),
-    .arstn_i                      (arstn_i                    ),
-    
-    .boot_addr_i                  (boot_addr_i                ),
 
-    // Instruction memory interface
-    .instr_rvalid_i               (instr_rvalid_i             ),
-    .instr_rdata_i                (instr_rdata_i              ),
-    .instr_req_o                  (instr_req_o                ),
-    .instr_addr_o                 (instr_addr_o               ),
+  miriscv_fetch_unit fetch_unit_inst
+  (
+    // clock, reset
+    .clk_i                   (clk_i),
+    .arstn_i                 (arstn_i),
 
-    // Control Unit
-    .cu_pc_bra_i                  (cu_pc_bra                  ),
-    .cu_kill_f_i                  (cu_kill[f]                 ),
-    .cu_boot_addr_load_en_i       (cu_boot_addr_load_en       ),
-    .cu_stall_f_i                 (cu_stall[f]                ),
-  
+    .boot_addr_i             (boot_addr_i),
 
-    // To Decode
-    .f_instr_o                    (instr[f]                   ),
-    .f_current_pc_o               (current_pc[f]              ),
-    .f_next_pc_o                  (next_pc[f]                 ),
-    .f_valid_o                    (valid[f]                   )
-    
+    // instruction memory interface
+    .instr_rvalid_i          (instr_rvalid_i),
+    .instr_rdata_i           (instr_rdata_i),
+    .instr_req_o             (instr_req_o),
+    .instr_addr_o            (instr_addr_o),
+
+    // core pipeline signals
+    .cu_pc_bra_i             (cu_pc_bra),
+    .cu_stall_f_i            (cu_stall[f]),
+    .cu_kill_f_i             (cu_kill[f]),
+    .cu_boot_addr_load_en_i  (cu_boot_addr_load_en),
+
+    .fetched_pc_addr_o       (current_pc[f]),
+    .fetched_pc_next_addr_o  (next_pc[f]),
+    .instr_o                 (instr[f]),
+    .fetch_rvalid_o          (valid[f])
   );
 
 

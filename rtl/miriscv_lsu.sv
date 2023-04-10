@@ -14,6 +14,7 @@ module miriscv_lsu
 (
   // clock, reset
   input                             clk_i,
+  input                             rst_n,
 
   // data memory interface
   input                             data_rvalid_i,
@@ -42,13 +43,35 @@ module miriscv_lsu
   
   logic [XLEN/4-1:0] data_be;
 
-  assign data_req_o  = lsu_req_i & ~data_rvalid_i;
+  assign data_req_o  = lsu_req_i;
   assign data_addr_o = lsu_addr_i;
   assign data_we_o   = lsu_we_i;
   assign data_be_o   = data_be;
-  
-  assign lsu_stall_o = lsu_req_i & ~lsu_we_i & ~data_rvalid_i;
-  
+
+  typedef enum {
+    S_IDLE,
+    S_LOAD
+  } state_t;
+
+  state_t state;
+
+  always_ff @(posedge clk_i) begin
+    if(~rst_n) begin
+      state <= S_IDLE;
+    end else begin
+       case (state)
+        S_IDLE: 
+          if(lsu_req_i && ~lsu_we_i)
+            state <= S_LOAD;
+        S_LOAD:
+          if(data_rvalid_i)
+            state <= S_IDLE;
+       endcase
+    end
+  end
+
+  assign lsu_stall_o = (lsu_req_i && ~lsu_we_i) && ((state == S_IDLE) || ((state == S_LOAD) && ~data_rvalid_i));
+
   ///////////
   // Store //
   ///////////
