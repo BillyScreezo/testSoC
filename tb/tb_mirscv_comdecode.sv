@@ -15,7 +15,7 @@
     logic [31:0] d_ram_cell_ls_op;
     logic [31:0] d_branch_addr;
 
-    assign f_instr          = DUT.core.fetch.fetch_unit.instr_rdata_i;
+    assign f_instr          = DUT.core.fetch_unit_inst.instr_rdata_i;
     assign d_instr          = DUT.core.decode.decoder.decode_instr_i;
     assign d_rs1            = DUT.core.decode.gpr.r1_data_o;
     assign d_rs2            = DUT.core.decode.gpr.r2_data_o;
