@@ -27,10 +27,10 @@
 
 
     assign d_current_PC     = DUT.core.decode.f_current_pc_i;
-    assign d_next_PC        = DUT.core.decode.f_next_pc_i
-    assign f_current_PC     = DUT.core.fetch.fetch_unit.pc_reg
-    assign f_next_PC        = DUT.core.fetch.fetch_unit.pc_next
-    assign f_instr          = DUT.core.fetch.fetch_unit.instr_rdata_i;
+    assign d_next_PC        = DUT.core.decode.f_next_pc_i;
+    assign f_current_PC     = DUT.core.fetch.pc_reg;
+    assign f_next_PC        = DUT.core.fetch.pc_next;
+    assign f_instr          = DUT.core.fetch.instr_rdata_i;
     assign d_instr          = DUT.core.decode.decoder.decode_instr_i;
     assign d_rs1            = DUT.core.decode.gpr.r1_data_o;
     assign d_rs2            = DUT.core.decode.gpr.r2_data_o;

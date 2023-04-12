@@ -126,7 +126,7 @@ module  miriscv_core
   logic             cu_boot_addr_load_en;
 
 
-  miriscv_fetch_unit fetch_unit_inst
+  miriscv_fetch_unit fetch
   (
     // clock, reset
     .clk_i                   (clk_i),
