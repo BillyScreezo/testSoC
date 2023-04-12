@@ -73,22 +73,6 @@ module miriscv_decode_stage
   output  logic                       cu_kill_d_o
 );
 
-  int cnt = 0;
-
-  // always_ff @(posedge clk_i)
-  //   if((f_current_pc_i == 32'h2c50) && (f_instr_i != { {(ILEN-8){1'b0}}, 8'h13 })) begin
-  //     cnt = cnt + 1;
-  //     $timeformat(-6, 4, " us");
-  //     $display("Time is: %t, Addr is: %h, cnt = %d", $time(), cu_pc_bra_o, cnt);
-  //   end
-
-  always_ff @(posedge clk_i)
-    if((gpr_wr_data == 32'hffff_fa79) && (gpr_wr_en)) begin
-      $timeformat(-6, 4, " us");
-      $display("%h, time: %t, f_current_pc_i: %h",gpr_wr_data, $time(), f_current_pc_i);
-    end
-
-
   logic        decode_rs1_re;
   logic        decode_rs2_re;
 

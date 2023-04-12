@@ -10,7 +10,6 @@
 
 module miriscv_fetch_unit
   import miriscv_pkg::XLEN;
-  import miriscv_pkg::ILEN;
 (
   // clock, reset
   input                     clk_i,
@@ -34,53 +33,65 @@ module miriscv_fetch_unit
   output  logic [XLEN-1:0]  fetched_pc_next_addr_o,
   output  logic [31:0]      instr_o,
   output  logic             fetch_rvalid_o
+
 );
 
   localparam BYTE_ADDR_W = $clog2(XLEN/8);
 
-  logic [XLEN-1:0] pc_reg;
+  logic [XLEN-1:0] pc_reg, c_pc, n_pc, c_pc_f, n_pc_f;
   logic [XLEN-1:0] pc_next;
   logic [XLEN-1:0] pc_plus_inc;
-  logic            fetch_en, f_valid;
-  
-  assign fetch_en = f_valid | cu_kill_f_i;
+
+  logic stall_f;
+  logic [XLEN-1:0] instr_f, instr;
+
+  assign instr = (stall_f) ? instr_f : instr_rdata_i;
+
+  always_ff @(posedge clk_i) begin
+    if(~arstn_i) begin
+      stall_f <= '0;
+      instr_f <= '0;
+    end else begin
+      stall_f <= cu_stall_f_i;
+      instr_f <= (cu_stall_f_i & !stall_f) ? instr_rdata_i : instr_f;
+    end
+  end
 
   always_ff @(posedge clk_i) begin
     if ( ~arstn_i ) begin
-      pc_reg <= '0; // Reset value here
-    end
-    else if ( cu_boot_addr_load_en_i ) begin
-      pc_reg <= boot_addr_i;
-    end
-    else if ( fetch_en ) begin
-      pc_reg <= pc_next;
+      pc_reg          <= '0;
+      fetch_rvalid_o  <= '0;
+    end else if ( cu_boot_addr_load_en_i ) begin
+      pc_reg          <= boot_addr_i;
+      fetch_rvalid_o  <= '0;
+    end else begin
+      if ( !cu_stall_f_i )
+        pc_reg <= pc_next;
+
+      if(!fetch_rvalid_o)
+        fetch_rvalid_o <= '1;
+      else if (cu_kill_f_i)
+        fetch_rvalid_o <= '0;
+
+      c_pc  <= pc_reg;
+      n_pc  <= pc_plus_inc;
+
+      c_pc_f <= (cu_stall_f_i & !stall_f) ? c_pc : c_pc_f;
+      n_pc_f <= (cu_stall_f_i & !stall_f) ? n_pc : n_pc_f;
+
     end
   end
 
   assign pc_plus_inc  = pc_reg + 'd4;
   assign pc_next      = ( cu_kill_f_i ) ? cu_pc_bra_i : pc_plus_inc;
 
-  assign instr_req_o  = ~(cu_boot_addr_load_en_i | instr_rvalid_i | cu_stall_f_i | cu_kill_f_i);
+  assign instr_req_o  = ~(cu_stall_f_i);
   assign instr_addr_o = pc_reg;
-
-  assign f_valid      = instr_rvalid_i & ~(cu_kill_f_i | cu_stall_f_i);
-
-  // Pipeline register
-  always_ff @(posedge clk_i) begin
-    if(~arstn_i) begin
-      instr_o                 <= { {(ILEN-8){1'b0}}, 8'h13 }; // ADDI x0, x0, 0 - NOP
-      fetched_pc_addr_o       <= '0;
-      fetched_pc_next_addr_o  <= '0;
-      fetch_rvalid_o          <= '0;
-    end
-    else if (~cu_stall_f_i) begin
-      instr_o                 <= f_valid ? instr_rdata_i : { {(ILEN-8){1'b0}}, 8'h13 }; // put NOP if not valid
-      fetched_pc_addr_o       <= pc_reg;
-      fetched_pc_next_addr_o  <= pc_plus_inc;
-      fetch_rvalid_o          <= f_valid;
-    end
-
-  end
   
+  assign instr_o      = fetch_rvalid_o ? instr : { {(32-8){1'b0}}, 8'h13 };
+
+
+  assign fetched_pc_addr_o      = (stall_f) ? c_pc_f : c_pc;
+  assign fetched_pc_next_addr_o = (stall_f) ? n_pc_f : n_pc;
 
 endmodule

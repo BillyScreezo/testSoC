@@ -59,9 +59,8 @@ module miriscv_decoder
   assign decode_rs1_re_o        = (decode_ex_op1_sel_o == 1'b0);
   assign decode_rs2_re_o        = (decode_ex_op2_sel_o == 1'b0);
   assign decode_ex_mdu_req_o    = (opcode == S_OPCODE_OP) && (funct7 == 7'h1);
-  assign decode_wb_we_o         = (opcode == S_OPCODE_OP) || (opcode == S_OPCODE_OPIMM) || (opcode == S_OPCODE_LOAD) ||
-                                  (opcode == S_OPCODE_JAL) || (opcode == S_OPCODE_JALR) || (opcode == S_OPCODE_LUI) || 
-                                  (opcode == S_OPCODE_AUIPC);
+  assign decode_wb_we_o         = !((opcode == S_OPCODE_FENCE) || (opcode[3:0] == 4'b1000)); // STORE or BRANCH
+  
   assign decode_fence_o         = (opcode == S_OPCODE_FENCE);
 
   assign decode_mem_req_o       = (opcode == S_OPCODE_LOAD) || (opcode == S_OPCODE_STORE);
@@ -115,7 +114,7 @@ module miriscv_decoder
 // Alu
   logic [3:0] alu_op;
   assign alu_op[2:0] = funct3;
-  
+
   always_comb
     (* full_case, parallel_case *) case (opcode)
       S_OPCODE_OP:      alu_op[3] = funct7[5];
