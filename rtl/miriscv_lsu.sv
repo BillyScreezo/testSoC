@@ -55,11 +55,13 @@ module miriscv_lsu
 
   state_t state;
 
-  always_ff @(posedge clk_i) begin
-    if(~rst_n) begin
+  always_ff @(posedge clk_i) // Если инструкция типа LOAD, 
+                             // то на первом такте - stall, на втором stall опускается, 
+                             // если "data_rvalid_i == 1" или держется, пока сигнал не будет таким
+    if(~rst_n)
       state <= S_IDLE;
-    end else begin
-       case (state)
+    else
+      (* full_case, parallel_case *) case (state)
         S_IDLE: 
           if(lsu_req_i && ~lsu_we_i)
             state <= S_LOAD;
@@ -67,10 +69,12 @@ module miriscv_lsu
           if(data_rvalid_i)
             state <= S_IDLE;
        endcase
-    end
-  end
+
+  // Для инструкций типа STORE stall НЕ поднимается
 
   assign lsu_stall_o = (lsu_req_i && ~lsu_we_i) && ((state == S_IDLE) || ((state == S_LOAD) && ~data_rvalid_i));
+
+
 
   ///////////
   // Store //
