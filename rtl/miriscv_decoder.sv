@@ -115,9 +115,7 @@ module miriscv_decoder
 // Alu
   logic [3:0] alu_op;
   assign alu_op[2:0] = funct3;
-
-  // assign alu_op[3] = (opcode == S_OPCODE_OPIMM) && (funct3 != 3'h5) ? 1'b0 : funct7[5];
-
+  
   always_comb
     (* full_case, parallel_case *) case (opcode)
       S_OPCODE_OP:      alu_op[3] = funct7[5];
