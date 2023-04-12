@@ -18,7 +18,7 @@ module  miriscv_alu
   input   logic [3:0]               alu_op_i,        // ALU opcode
 
   output  logic [XLEN-1:0]          alu_result_o,    // ALU result
-  output  logic                     alu_branch_des_o, // Comparison result for branch decision
+  output  logic                     alu_branch_des_o // Comparison result for branch decision
 
 );
 

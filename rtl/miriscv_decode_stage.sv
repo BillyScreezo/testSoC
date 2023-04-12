@@ -288,7 +288,7 @@ module miriscv_decode_stage
   assign cu_stall_d_o = cu_stall_f_o;
 
   // precompute PC values in case of jump
-  assign cu_pc_bra_o = d_jalr ? r1_data + imm : f_current_pc_i  + imm;;
+  assign cu_pc_bra_o = d_jalr ? $signed(r1_data) + $signed(imm) : $signed(f_current_pc_i)  + $signed(imm);
 
   // RVFI INTERFACE
   if (RVFI) begin
