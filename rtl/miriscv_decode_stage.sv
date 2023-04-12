@@ -73,6 +73,22 @@ module miriscv_decode_stage
   output  logic                       cu_kill_d_o
 );
 
+  int cnt = 0;
+
+  // always_ff @(posedge clk_i)
+  //   if((f_current_pc_i == 32'h2c50) && (f_instr_i != { {(ILEN-8){1'b0}}, 8'h13 })) begin
+  //     cnt = cnt + 1;
+  //     $timeformat(-6, 4, " us");
+  //     $display("Time is: %t, Addr is: %h, cnt = %d", $time(), cu_pc_bra_o, cnt);
+  //   end
+
+  always_ff @(posedge clk_i)
+    if((gpr_wr_data == 32'hffff_fa79) && (gpr_wr_en)) begin
+      $timeformat(-6, 4, " us");
+      $display("%h, time: %t, f_current_pc_i: %h",gpr_wr_data, $time(), f_current_pc_i);
+    end
+
+
   logic        decode_rs1_re;
   logic        decode_rs2_re;
 
@@ -186,9 +202,9 @@ module miriscv_decode_stage
   assign op2 = decode_ex_op2_sel ? imm            : r2_data;
 
   assign decode_mem_data = r2_data;
-  assign decode_mem_addr = alu_add;
+  assign decode_mem_addr = r1_data + imm;
 
-  logic [XLEN-1:0] alu_result, alu_add;
+  logic [XLEN-1:0] alu_result;
   logic [XLEN-1:0] mdu_result;
   logic [XLEN-1:0] lsu_result;
 
@@ -208,9 +224,7 @@ module miriscv_decode_stage
     .cmp_b_i           (r2_data              ),
     .alu_op_i          (decode_alu_operation ),
     .alu_result_o      (alu_result           ),
-    .alu_branch_des_o  (branch_des           ),
-
-    .alu_add           (alu_add)
+    .alu_branch_des_o  (branch_des           )
   );
 
   miriscv_mdu mdu (
@@ -274,7 +288,7 @@ module miriscv_decode_stage
   assign cu_stall_d_o = cu_stall_f_o;
 
   // precompute PC values in case of jump
-  assign cu_pc_bra_o = alu_add;
+  assign cu_pc_bra_o = d_jalr ? r1_data + imm : f_current_pc_i  + imm;;
 
   // RVFI INTERFACE
   if (RVFI) begin
