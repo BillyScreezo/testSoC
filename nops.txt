@@ -1,3 +1,3 @@
 Подсчёт до первого изменения uart_data:
-nop_cnt: 32370
-all_cnt: 417708
+nop_cnt: 64728
+all_cnt: 450015
