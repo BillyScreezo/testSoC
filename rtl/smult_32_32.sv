@@ -130,7 +130,7 @@ module smult_32_32 (
 	assign lr = {{28{a1_b1_lr[35]}}, a1_b1_lr};
 
 	always_ff @(posedge clk)
-		casex ({zf, little_mult})
+		(* full_case, parallel_case *) casex ({zf, little_mult})
 			2'b1? : r <= 64'h0;
 			2'b01 : r <= lr;
 			2'b00 : r <= hr;

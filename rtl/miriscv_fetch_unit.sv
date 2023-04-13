@@ -36,8 +36,6 @@ module miriscv_fetch_unit
 
 );
 
-  localparam BYTE_ADDR_W = $clog2(XLEN/8);
-
   logic [XLEN-1:0] pc_reg, c_pc, n_pc;
   logic [XLEN-1:0] pc_next;
   logic [XLEN-1:0] pc_plus_inc;
@@ -80,8 +78,6 @@ module miriscv_fetch_unit
       else if (cu_kill_f_i)   // Выдаём пузырёк, если был переход (1 такт на загрузку адреса)
         fetch_rvalid_o <= '0;
 
-
-
   assign pc_plus_inc  = pc_reg + 'd4;                                 // PC + 4
   assign pc_next      = ( cu_kill_f_i ) ? cu_pc_bra_i : pc_plus_inc;  // Выборка адреса для PC
 
@@ -89,7 +85,6 @@ module miriscv_fetch_unit
   assign instr_addr_o = pc_reg;
   
   assign instr_o      = fetch_rvalid_o ? instr : { {(XLEN-8){1'b0}}, 8'h13 };
-
 
   assign fetched_pc_addr_o      = c_pc;
   assign fetched_pc_next_addr_o = n_pc;
