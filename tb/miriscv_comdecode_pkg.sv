@@ -1,6 +1,6 @@
 package miriscv_comdecode_pkg;
 	
-	typedef enum {
+	typedef enum logic [6:0]{
 	OPCODE_SYSTEM = 7'b1110011,
     OPCODE_FENCE  = 7'b0001111,
     OPCODE_OP     = 7'b0110011,
@@ -23,7 +23,15 @@ package miriscv_comdecode_pkg;
         ALU_SRL 	= 10'b101_0000000,
         ALU_SRA 	= 10'b101_0100000,
         ALU_SLTS 	= 10'b010_0000000,
-        ALU_SLTU 	= 10'b011_0000000
+        ALU_SLTU 	= 10'b011_0000000,
+        ALU_MUL     = 10'b000_0000001,
+        ALU_MULH    = 10'b001_0000001,
+        ALU_MULHSU  = 10'b010_0000001,
+        ALU_MULHU   = 10'b011_0000001,
+        ALU_DIV     = 10'b100_0000001,
+        ALU_DIVU    = 10'b101_0000001,
+        ALU_REM     = 10'b110_0000001,
+        ALU_REMU    = 10'b111_0000001
     } alu_op_t;
 
     typedef enum {
@@ -66,7 +74,16 @@ package miriscv_comdecode_pkg;
         LUI,
         AUIPC,
         SYSTEM,
-        MISCMEM
+        MISCMEM,
+        MUL,
+        MULH,
+        MULHSU,
+        MULHU,
+        DIV,
+        DIVU,
+        REM,
+        REMU,
+        ILLEGAL
     } command_t;
 
 endpackage : miriscv_comdecode_pkg

@@ -40,11 +40,6 @@ module miriscv_fetch_stage
 );
 
 
-  logic [ILEN-1:0] fetch_instr;
-  logic [XLEN-1:0] f_current_pc;
-  logic [XLEN-1:0] f_next_pc;
-  logic            fetch_instr_valid;
-
   miriscv_fetch_unit fetch_unit (
    .clk_i                   (clk_i          ),
    .arstn_i                 (arstn_i        ),
@@ -58,33 +53,16 @@ module miriscv_fetch_stage
    .instr_addr_o            (instr_addr_o   ),
 
     // core pipeline signals
-    .cu_pc_bra_i            (cu_pc_bra_i            ),
-    .cu_stall_f_i           (cu_stall_f_i           ),
-    .cu_kill_f_i            (cu_kill_f_i        ),
+    .cu_pc_bra_i            (cu_pc_bra_i    ),
+    .cu_stall_f_i           (cu_stall_f_i   ),
+    .cu_kill_f_i            (cu_kill_f_i    ),
     .cu_boot_addr_load_en_i (cu_boot_addr_load_en_i ),
 
-    .fetched_pc_addr_o      (f_current_pc      ),
-    .fetched_pc_next_addr_o (f_next_pc         ),
-    .instr_o                (fetch_instr       ),
-    .fetch_rvalid_o         (fetch_instr_valid )
+    .f_current_pc_o         (f_current_pc_o ),
+    .f_next_pc_o            (f_next_pc_o    ),
+    .f_instr_o              (f_instr_o      ),
+    .f_valid_o              (f_valid_o      )
   );
 
-  
-  // Pipeline register
-  always_ff @(posedge clk_i) begin
-    if(~arstn_i) begin
-      f_instr_o                 <= { {(ILEN-8){1'b0}}, 8'h13 }; // ADDI x0, x0, 0 - NOP
-      f_current_pc_o            <= '0;
-      f_next_pc_o               <= '0;
-      f_valid_o                 <= '0;
-    end
-    else if (~cu_stall_f_i) begin
-      f_instr_o                 <= fetch_instr_valid ? fetch_instr : { {(ILEN-8){1'b0}}, 8'h13 }; // put NOP if not valid
-      f_current_pc_o            <= f_current_pc;
-      f_next_pc_o               <= f_next_pc;
-      f_valid_o                 <= fetch_instr_valid;
-    end
-
-  end
 
 endmodule
