@@ -25,6 +25,7 @@
     logic [31:0] f_next_PC;
     logic [31:0] d_next_PC;
 
+
     assign d_current_PC     = DUT.core.decode.f_current_pc_i;
     assign d_next_PC        = DUT.core.decode.f_next_pc_i
     assign f_current_PC     = DUT.core.fetch.fetch_unit.pc_reg
