@@ -34,6 +34,14 @@ package miriscv_comdecode_pkg;
         ALU_REMU    = 10'b111_0000001
     } alu_op_t;
 
+    enum logic [2:0] {        
+        ALU_ADDI    = 3'b000,
+        ALU_XORI    = 3'b100,
+        ALU_ORI     = 3'b110,
+        ALU_ANDI    = 3'b111,
+        ALU_SLTSI   = 3'b010,
+        ALU_SLTUI   = 3'b011} alu_opi_t;
+
     typedef enum {
         NOP,
         ADD,
