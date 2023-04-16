@@ -42,6 +42,15 @@ module miriscv_fetch_unit
   logic [XLEN-1:0] pc_next;
   logic [XLEN-1:0] pc_plus_inc;
   logic            fetch_en, f_valid;
+
+  logic            predicted_flag; 
+  logic [XLEN-1:0] pc_branch; 
+  logic [XLEN-1:0] imm_branch;
+
+  miriscv_branch_pred_simple branch_prediction(
+    .instr_rdata_i    ( instr_rdata_i ),
+    .predicted_flag_o ( predicted_flag )
+  );
   
   assign fetch_en = f_valid | cu_kill_f_i;
 
@@ -57,8 +66,16 @@ module miriscv_fetch_unit
     end
   end
 
-  assign pc_plus_inc  = pc_reg + 'd4;
-  assign pc_next      = ( cu_kill_f_i ) ? cu_pc_bra_i : pc_plus_inc;
+  assign pc_plus_inc    = pc_reg + 'd4;
+  assign pc_next        = cu_kill_f_i ? cu_pc_bra_i : pc_branch ;
+  assign pc_branch      = predicted_flag ? pc_reg + imm_branch : pc_plus_inc; 
+  
+  assign imm_branch [31:12] = {20{instr_rdata_i[31]}};
+  assign imm_branch [11]    = instr_rdata_i[7];
+  assign imm_branch [10:5]  = instr_rdata_i[30:25];
+  assign imm_branch [4:1]   = instr_rdata_i[11:8];
+  assign imm_branch [0]     = '0;
+
 
   assign instr_req_o  = ~(cu_boot_addr_load_en_i | instr_rvalid_i | cu_stall_f_i | cu_kill_f_i);
   assign instr_addr_o = pc_reg;

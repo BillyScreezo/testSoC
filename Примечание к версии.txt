@@ -1,5 +1,5 @@
-Описание: *ухудшение* подсчёт адресов PC+LSU на ALU, упрощение декодера ALU op
-CoreMark: 23.0 (предыдущий 23.0)
-Total ticks: 687352 (предыдущий 687352)
-Worst slack: -9.319 ns (предыдущий -8.582 ns)
-Total slack: -24613.133 ns (предыдущий -24508.408 ns)
+Описание: static branch prediction
+CoreMark: 24.0 (предыдущий 23.0)
+Total ticks: 675424 (предыдущий 687352)
+Worst slack:  -9.801 ns (предыдущий-9.319 ns)
+Total slack: -24613.133 ns (предыдущий -24613.133 ns)

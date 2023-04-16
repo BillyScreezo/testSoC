@@ -268,13 +268,16 @@ module miriscv_decode_stage
   assign cu_boot_addr_load_en_o = ~boot_addr_load[1];
 
   assign cu_stall_f_o = cu_boot_addr_load_en_o  | lsu_stall_req | mdu_stall_req;
-  assign cu_kill_f_o  = (branch_des & d_branch) | d_jal | d_jalr;
+ 
+  assign cu_kill_f_o  = ( branch_des & d_branch & ~f_instr_i[31] ) | ( ~branch_des & d_branch & f_instr_i[31] ) | d_jal | d_jalr;
 
   assign cu_kill_d_o  = 'b0;
   assign cu_stall_d_o = cu_stall_f_o;
 
+
   // precompute PC values in case of jump
-  assign cu_pc_bra_o = alu_add;
+ assign cu_pc_bra_o = ( ( branch_des & d_branch ) | d_jal | d_jalr ) ? alu_add : f_current_pc_i + 'd4;
+
 
   // RVFI INTERFACE
   if (RVFI) begin
