@@ -26,12 +26,13 @@
     logic [31:0] d_next_PC;
 
 
-    assign d_current_PC     = DUT.core.decode.f_current_pc_i;
-    assign d_next_PC        = DUT.core.decode.f_next_pc_i
-    assign f_current_PC     = DUT.core.fetch.fetch_unit.pc_reg
-    assign f_next_PC        = DUT.core.fetch.fetch_unit.pc_next
+    assign d_current_PC     = DUT.core.fetch.fetch_unit.f_current_pc_o;
+    assign d_next_PC        = DUT.core.fetch.fetch_unit.f_next_pc_o;
+    assign f_current_PC     = DUT.core.fetch.fetch_unit.f_next_pc_o;
+    assign f_next_PC        = DUT.core.fetch.fetch_unit.instr_addr_o;
     assign f_instr          = DUT.core.fetch.fetch_unit.instr_rdata_i;
-    assign d_instr          = DUT.core.decode.decoder.decode_instr_i;
+    assign d_instr          = DUT.core.fetch.fetch_unit.f_instr_o;
+
     assign d_rs1            = DUT.core.decode.gpr.r1_data_o;
     assign d_rs2            = DUT.core.decode.gpr.r2_data_o;
     assign d_rd             = DUT.core.decode.gpr.wr_data_i;
@@ -95,16 +96,20 @@
                 endcase
             end
             OPCODE_OPIMM: begin
-                case({f_func3, f_func7})
-                    ALU_ADD:  f_command = ADDI;
-                    ALU_XOR:  f_command = XORI;
-                    ALU_OR:   f_command = ORI;
-                    ALU_AND:  f_command = ANDI;
+                case({d_func3, d_func7})
                     ALU_SLL:  f_command = SLLI;
                     ALU_SRL:  f_command = SRLI;
                     ALU_SRA:  f_command = SRAI;
-                    ALU_SLTS: f_command = SLTSI;
-                    ALU_SLTU: f_command = SLTUI;
+                    default: begin 
+                        case(d_func3)
+                            ALU_ADDI: f_command = ADDI;
+                            ALU_XORI: f_command = XORI;
+                            ALU_ORI:  f_command = ORI;
+                            ALU_ANDI: f_command = ANDI;
+                            ALU_SLTSI:f_command = SLTSI;
+                            ALU_SLTUI:f_command = SLTUI;
+                        endcase
+                    end
                 endcase
             end
             OPCODE_LOAD: begin
@@ -175,15 +180,19 @@
             end
             OPCODE_OPIMM: begin
                 case({d_func3, d_func7})
-                    ALU_ADD:  d_command = ADDI;
-                    ALU_XOR:  d_command = XORI;
-                    ALU_OR:   d_command = ORI;
-                    ALU_AND:  d_command = ANDI;
                     ALU_SLL:  d_command = SLLI;
                     ALU_SRL:  d_command = SRLI;
                     ALU_SRA:  d_command = SRAI;
-                    ALU_SLTS: d_command = SLTSI;
-                    ALU_SLTU: d_command = SLTUI;
+                    default: begin 
+                        case(d_func3)
+                            ALU_ADDI: d_command = ADDI;
+                            ALU_XORI: d_command = XORI;
+                            ALU_ORI:  d_command = ORI;
+                            ALU_ANDI: d_command = ANDI;
+                            ALU_SLTSI:d_command = SLTSI;
+                            ALU_SLTUI:d_command = SLTUI;
+                        endcase
+                    end
                 endcase
             end
             OPCODE_LOAD: begin

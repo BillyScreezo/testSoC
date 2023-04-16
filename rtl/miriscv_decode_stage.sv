@@ -186,9 +186,9 @@ module miriscv_decode_stage
   assign op2 = decode_ex_op2_sel ? imm            : r2_data;
 
   assign decode_mem_data = r2_data;
-  assign decode_mem_addr = alu_add;
+  assign decode_mem_addr = r1_data + imm;
 
-  logic [XLEN-1:0] alu_result, alu_add;
+  logic [XLEN-1:0] alu_result;
   logic [XLEN-1:0] mdu_result;
   logic [XLEN-1:0] lsu_result;
 
@@ -208,9 +208,7 @@ module miriscv_decode_stage
     .cmp_b_i           (r2_data              ),
     .alu_op_i          (decode_alu_operation ),
     .alu_result_o      (alu_result           ),
-    .alu_branch_des_o  (branch_des           ),
-
-    .alu_add           (alu_add)
+    .alu_branch_des_o  (branch_des           )
   );
 
   miriscv_mdu mdu (
@@ -220,8 +218,8 @@ module miriscv_decode_stage
     .mdu_port_a_i    (r1_data                          ),
     .mdu_port_b_i    (r2_data                          ),
     .mdu_op_i        (decode_mdu_operation             ),
-    .mdu_kill_i      (1'b0                             ),
-    .mdu_keep_i      (1'b0                             ),
+    .mdu_kill_i      (1'b0                             ),   // Для 2-х стадийного бесполезно
+    .mdu_keep_i      (1'b0                             ),   // Не используется в coremark 
     .mdu_result_o    (mdu_result                       ),
     .mdu_stall_req_o (mdu_stall_req                    )
   );
@@ -242,8 +240,8 @@ module miriscv_decode_stage
 
     // core pipeline signals
     .lsu_req_i               (decode_mem_req             ),
-    .lsu_kill_i              (1'b0                       ),
-    .lsu_keep_i              (1'b0                       ),
+    .lsu_kill_i              (1'b0                       ),   // Для 2-х стадийного бесполезно
+    .lsu_keep_i              (1'b0                       ),   // ???
     .lsu_we_i                (decode_mem_we              ),
     .lsu_size_i              (decode_mem_size            ),
     .lsu_addr_i              (decode_mem_addr            ),
@@ -274,38 +272,12 @@ module miriscv_decode_stage
   assign cu_stall_d_o = cu_stall_f_o;
 
   // precompute PC values in case of jump
-  assign cu_pc_bra_o = alu_add;
+  assign cu_pc_bra_o = d_jalr ? $signed(r1_data) + $signed(imm) : $signed(f_current_pc_i)  + $signed(imm);  // Можно считать на АЛУ - хуже
 
   // RVFI INTERFACE
   if (RVFI) begin
     always_ff @(posedge clk_i) begin
       if(~arstn_i) begin
-        d_rvfi_wb_data_o        <= 'd0;
-        d_rvfi_wb_we_o          <= 'd0;
-        d_rvfi_wb_rd_addr_o     <= 'd0;
-
-        d_rvfi_instr_o          <= 'd0;
-        d_rvfi_rs1_addr_o       <= 'd0;
-        d_rvfi_rs2_addr_o       <= 'd0;
-        d_rvfi_op1_gpr_o        <= 'd0;
-        d_rvfi_op2_gpr_o        <= 'd0;
-        d_rvfi_rs1_rdata_o      <= 'd0;
-        d_rvfi_rs2_rdata_o      <= 'd0;
-        d_rvfi_current_pc_o     <= 'd0;
-        d_rvfi_next_pc_o        <= 'd0;
-        d_rvfi_valid_o          <= 'd0;
-        d_rvfi_trap_o           <= 'd0;
-        d_rvfi_intr_o           <= 'd0;
-
-        d_rvfi_mem_req_o        <= 'd0;
-        d_rvfi_mem_we_o         <= 'd0;
-        d_rvfi_mem_size_o       <= 'd0;
-        d_rvfi_mem_addr_o       <= 'd0;
-        d_rvfi_mem_wdata_o      <= 'd0;
-        d_rvfi_mem_rdata_o      <= 'd0;
-      end
-
-      else if (cu_kill_d_o) begin
         d_rvfi_wb_data_o        <= 'd0;
         d_rvfi_wb_we_o          <= 'd0;
         d_rvfi_wb_rd_addr_o     <= 'd0;

@@ -58,8 +58,9 @@ module miriscv_decoder
 
   assign decode_rs1_re_o        = (decode_ex_op1_sel_o == 1'b0);
   assign decode_rs2_re_o        = (decode_ex_op2_sel_o == 1'b0);
-  assign decode_ex_mdu_req_o    = (opcode == S_OPCODE_OP) && (funct7 == 1'b1);
+  assign decode_ex_mdu_req_o    = (opcode == S_OPCODE_OP) && (funct7 == 7'h1);
   assign decode_wb_we_o         = !((opcode == S_OPCODE_FENCE) || (opcode[3:0] == 4'b1000)); // STORE or BRANCH
+  
   assign decode_fence_o         = (opcode == S_OPCODE_FENCE);
 
   assign decode_mem_req_o       = (opcode == S_OPCODE_LOAD) || (opcode == S_OPCODE_STORE);
@@ -95,8 +96,8 @@ module miriscv_decoder
       default: ill_opcode = 1'b1;
     endcase
 
-  assign decode_ex_op1_sel_o = (opcode == S_OPCODE_AUIPC) || (opcode == S_OPCODE_JAL) || (opcode == S_OPCODE_BRANCH);
-  assign decode_ex_op2_sel_o = (opcode == S_OPCODE_OPIMM) || (opcode == S_OPCODE_AUIPC) || (opcode == S_OPCODE_JAL) || (opcode == S_OPCODE_JALR) || (opcode == S_OPCODE_BRANCH) || (opcode == S_OPCODE_STORE) || (opcode == S_OPCODE_LOAD);
+  assign decode_ex_op1_sel_o = (opcode == S_OPCODE_AUIPC);
+  assign decode_ex_op2_sel_o = (opcode == S_OPCODE_OPIMM) || (opcode == S_OPCODE_AUIPC);
 
   always_comb
     (* parallel_case *) case(opcode)
@@ -114,12 +115,11 @@ module miriscv_decoder
   logic [3:0] alu_op;
   assign alu_op[2:0] = funct3;
 
-  // assign alu_op[3] = (opcode == S_OPCODE_OPIMM) && (funct3 != 3'h5) ? 1'b0 : funct7[5];
-
   always_comb
     (* full_case, parallel_case *) case (opcode)
       S_OPCODE_OP:      alu_op[3] = funct7[5];
       S_OPCODE_OPIMM:   alu_op[3] = (funct3 == 3'h5) ? funct7[5] : 1'b0;
+      default:          alu_op[3] = 1'b0;
     endcase
 
 // Exit assigns
