@@ -270,6 +270,7 @@ module miriscv_decode_stage
   assign cu_kill_d_o  = 'b0;
   assign cu_stall_d_o = cu_stall_f_o;
 
+
   // precompute PC values in case of jump
   //assign cu_pc_bra_o = d_jalr ? $signed(r1_data) + $signed(imm) : $signed(f_current_pc_i)  + $signed(imm);  // Можно считать на АЛУ - хуже
   assign cu_pc_bra_o = d_jalr ? ( $signed(r1_data) + $signed(imm) )
