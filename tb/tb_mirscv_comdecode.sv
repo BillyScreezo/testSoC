@@ -1,6 +1,12 @@
     
     import miriscv_comdecode_pkg::*;
 
+    logic clk_decode;
+    logic arstn_decode;
+
+    assign clk_decode   = DUT.core.decode.clk_i;
+    assign arstn_decode = DUT.core.decode.arstn_i;
+
     logic [31:0] f_instr;
     logic [31:0] d_instr;
     // logic [31:0] f_rs1;
@@ -240,4 +246,23 @@
                 d_command = MISCMEM;
             end
         endcase
+    end
+
+    parameter WRITE_FILE_PROG = 0;
+
+    if(WRITE_FILE_PROG) begin
+        initial begin
+            integer fd_log_prog;
+            fd_log_prog = $fopen("file_log_prog.txt","w");
+            if(fd_log_prog) $display("file log_prog was opened");
+            else begin $display("file was not opened. Retry again"); $finish; end
+
+            $fdisplay(fd_log_prog, "                time   d_instr    d_cur_PC   d_command ");
+            
+            forever  begin 
+                @(posedge clk_decode)
+                $fdisplay(fd_log_prog, "%t | %h | %h | %s", $time, d_instr, d_current_PC, d_command.name());
+            end
+
+        end
     end
