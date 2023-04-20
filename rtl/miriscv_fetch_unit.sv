@@ -51,12 +51,12 @@ module miriscv_fetch_unit
     .instr_rdata_i    ( instr_rdata_i ),
     .predicted_flag_o ( predicted_flag )
   );*/
-  assign predicted_flag = ( instr_rdata_i[6:0] == OPCODE_BRANCH ) & ( instr_rdata_i[XLEN-1] ); // так бысрее
+  assign predicted_flag = ( instr_rdata_i[6:0] == OPCODE_BRANCH ) & ( instr_rdata_i[XLEN-1] ); // так бысрее 
 
   assign pc_plus_inc    = f_next_pc_o + 'd4;
   assign f_valid_o      = instr_rvalid_i & ~boot_reg;
   assign instr_req_o    = ~cu_boot_addr_load_en_i & ~cu_stall_f_i & ~cu_kill_f_i;
-  assign pc_branch      = f_next_pc_o + imm_branch;
+  assign pc_branch      = f_next_pc_o + $signed(imm_branch);
 
   assign imm_branch [31:12] = {20{instr_rdata_i[31]}};
   assign imm_branch [11]    = instr_rdata_i[7];
@@ -71,8 +71,10 @@ module miriscv_fetch_unit
       instr_addr_o = f_next_pc_o;
     else if(cu_kill_f_i)
       instr_addr_o = cu_pc_bra_i;
+    else if(predicted_flag)
+      instr_addr_o = pc_branch;
     else 
-      instr_addr_o = predicted_flag ? pc_branch : pc_plus_inc;
+      instr_addr_o = pc_plus_inc;
   end
 
   always_ff @(posedge clk_i) boot_reg <= cu_boot_addr_load_en_i;
